@@ -25,10 +25,10 @@ requests_by_ip:dict[str,deque]=defaultdict(deque)
 @app.middleware("http")
 async def security_and_logging(request:Request,call_next):
     start=time.perf_counter();client=request.client.host if request.client else "unknown"
-    if request.url.path in {"/api/v1/auth/login","/api/v1/ai/search","/api/v1/ai/feedback","/api/v1/qr/decode-image"}:
+    if request.url.path in {"/api/v1/auth/login","/api/v1/ai/search","/api/v1/ai/feedback","/api/v1/qr/decode-image","/api/v1/qr/verify-user","/api/v1/qr/verify-book","/api/v1/borrowings","/api/v1/returns","/api/v1/reservations"}:
         now=time.monotonic();bucket=requests_by_ip[f"{client}:{request.url.path}"]
-        while bucket and now-bucket[0]>60:bucket.popleft()
-        if len(bucket)>=30:return JSONResponse(status_code=429,content={"detail":"Too many requests. Try again later."})
+        while bucket and now-bucket[0]>settings.rate_limit_window_seconds:bucket.popleft()
+        if len(bucket)>=settings.rate_limit_requests_per_window:return JSONResponse(status_code=429,content={"detail":"Too many requests. Try again later."},headers={"Retry-After":str(settings.rate_limit_window_seconds)})
         bucket.append(now)
     content_length=request.headers.get("content-length")
     try:too_large=bool(content_length and int(content_length)>settings.max_upload_bytes)
@@ -38,8 +38,12 @@ async def security_and_logging(request:Request,call_next):
 
 @app.get("/health",tags=["System"])
 def health():
-    with SessionLocal() as db:db.execute(text("SELECT 1"))
-    return {"status":"healthy","service":"librai-api","version":"1.0.0"}
+    try:
+        with SessionLocal() as db:db.execute(text("SELECT 1"))
+    except Exception:
+        logger.exception("Database health check failed")
+        return JSONResponse(status_code=503,content={"status":"degraded","service":"librai-api","database":"unavailable"})
+    return {"status":"healthy","service":"librai-api","version":"1.0.0","database":"connected","gemini_configured":bool(settings.gemini_api_key),"gemini_model":settings.gemini_model}
 
 @app.get("/api/v1/health",include_in_schema=False)
 def api_health():return health()

@@ -27,9 +27,15 @@ def build(page: ft.Page) -> ft.View:
     table_width = lambda base: int(base * table_scale)
     search = admin_search_field(hint_text="Search title, author, ISBN, or keyword")
     include_archived = ft.Checkbox(label="Include archived", value=False)
+    category_filter = admin_text_field(label="Category", hint_text="Technology", width=145)
+    author_filter = admin_text_field(label="Author", hint_text="Any author", width=145)
+    shelf_filter = admin_text_field(label="Shelf", hint_text="A-01", width=110)
+    available_filter = ft.Checkbox(label="Available only", value=False)
     notice = ft.Column(spacing=Spacing.SM)
     body = ft.Column(spacing=Spacing.MD, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
     pager = ft.Row(alignment=ft.MainAxisAlignment.END, spacing=Spacing.SM)
+    csv_picker = ft.FilePicker()
+    page.overlay.append(csv_picker)
 
     def show_notice(kind: str, message: str, title: str | None = None) -> None:
         notice.controls = [Alert(kind, message, title=title)]
@@ -301,6 +307,10 @@ def build(page: ft.Page) -> ft.View:
             page.update()
         result = admin_catalog_service.list_books(
             str(search.value or "").strip() or None,
+            str(category_filter.value or "").strip() or None,
+            str(author_filter.value or "").strip() or None,
+            str(shelf_filter.value or "").strip() or None,
+            bool(available_filter.value),
             state["offset"],
             PAGE_SIZE,
             bool(include_archived.value),
@@ -358,15 +368,34 @@ def build(page: ft.Page) -> ft.View:
         state["offset"] = 0
         load()
 
+    def import_csv(_event=None) -> None:
+        csv_picker.pick_files(dialog_title="Import catalog CSV", allowed_extensions=["csv"], allow_multiple=False)
+
+    def csv_selected(event) -> None:
+        if not event.files:
+            return
+        result = admin_catalog_service.import_books(event.files[0].path)
+        show_notice("success" if result.ok else result.error_kind, "Catalog imported successfully." if result.ok else result.message, "Import complete" if result.ok else "Import failed")
+        if result.ok:
+            load()
+
+    csv_picker.on_result = csv_selected
+
     search.on_submit = new_search
     include_archived.on_change = new_search
+    available_filter.on_change = new_search
     toolbar = ft.Row(
         spacing=Spacing.SM,
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
             ft.Container(expand=True, content=search),
             ft.Container(height=50, alignment=ft.alignment.center_left, content=include_archived),
+            category_filter,
+            author_filter,
+            shelf_filter,
+            available_filter,
             ft.OutlinedButton("Refresh", icon=ft.Icons.REFRESH_ROUNDED, on_click=new_search),
+            ft.OutlinedButton("Import CSV", icon=ft.Icons.UPLOAD_FILE_ROUNDED, on_click=import_csv),
             ft.FilledButton("Add book", icon=ft.Icons.ADD_ROUNDED, on_click=lambda _e: open_book_form()),
         ],
     )

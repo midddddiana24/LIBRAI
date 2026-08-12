@@ -37,6 +37,7 @@ GROUPS: list[tuple[str, list[tuple[str, str, str]]]] = [
         (Routes.ADMIN_BORROWINGS,   ft.Icons.OUTPUT_ROUNDED,                "Borrowings"),
         (Routes.ADMIN_RETURNS,      ft.Icons.KEYBOARD_RETURN_ROUNDED,       "Returns"),
         (Routes.ADMIN_RESERVATIONS, ft.Icons.BOOKMARK_BORDER_ROUNDED,       "Reservations"),
+        (Routes.ADMIN_FINES,         ft.Icons.PAYMENTS_OUTLINED,             "Fines"),
     ]),
     ("CATALOG & USERS", [
         (Routes.ADMIN_BOOKS,        ft.Icons.MENU_BOOK_OUTLINED,            "Books"),
@@ -46,6 +47,7 @@ GROUPS: list[tuple[str, list[tuple[str, str, str]]]] = [
         (Routes.ADMIN_REPORTS,      ft.Icons.INSERT_CHART_OUTLINED_ROUNDED, "Reports"),
         (Routes.ADMIN_AUDIT_LOGS,   ft.Icons.HISTORY_ROUNDED,               "Audit Logs"),
         (Routes.ADMIN_SETTINGS,     ft.Icons.SETTINGS_OUTLINED,             "Settings"),
+        (Routes.ADMIN_EMAIL_DELIVERIES, ft.Icons.MARK_EMAIL_UNREAD_OUTLINED, "Email Deliveries"),
     ]),
 ]
 

@@ -3,7 +3,7 @@ from datetime import datetime,timedelta,timezone
 import pytest
 from sqlalchemy import select
 from backend.core.exceptions import DomainError
-from backend.models.entities import BookCopy,Borrowing,BorrowingStatus,CopyStatus,SystemSetting,User
+from backend.models.entities import BookCopy,Borrowing,BorrowingStatus,CopyStatus,EmailDelivery,Fine,FineStatus,SystemSetting,User
 from backend.services.borrowing_service import borrow_book
 from backend.tests.conftest import qr_grants
 
@@ -39,6 +39,29 @@ def test_return_rejects_wrong_book_qr(client):
     other=client.post("/api/v1/qr/verify-book",json={"qr_token":"BOOK_QR_second_secure_token_123"}).json()
     response=client.post("/api/v1/returns",json={"borrowing_id":receipt["id"],"book_verification_token":other["verification_token"]})
     assert response.status_code==401
+
+def test_overdue_return_assesses_fine_and_blocks_until_paid(client,db_factory,auth_headers):
+    payload=borrow_payload(client);receipt=client.post("/api/v1/borrowings",json=payload).json()
+    with db_factory() as db:
+        borrowing=db.get(Borrowing,receipt["id"])
+        borrowing.due_at=datetime.now(timezone.utc)-timedelta(days=2)
+        db.commit()
+    book=client.post("/api/v1/qr/verify-book",json={"qr_token":"BOOK_QR_test_secure_token_12345"}).json()
+    returned=client.post("/api/v1/returns",json={"borrowing_id":receipt["id"],"book_verification_token":book["verification_token"]})
+    assert returned.status_code==201 and returned.json()["return_status"]=="overdue"
+    fines=client.get("/api/v1/fines",params={"user_id":payload["user_id"],"verification_token":payload["user_verification_token"]})
+    assert fines.status_code==200 and fines.json()["total"]==1
+    fine=fines.json()["items"][0]
+    assert fine["amount_cents"]>=500 and fine["status"]=="unpaid"
+    with db_factory() as db:
+        assert db.scalar(select(EmailDelivery).where(EmailDelivery.recipient=="student@librai.test")) is not None
+    second=client.post("/api/v1/qr/verify-book",json={"qr_token":"BOOK_QR_second_secure_token_123"}).json()
+    blocked=client.post("/api/v1/borrowings",json={"user_id":payload["user_id"],"book_copy_id":second["id"],"user_verification_token":payload["user_verification_token"],"book_verification_token":second["verification_token"]})
+    assert blocked.status_code==409 and blocked.json()["error"]["code"]=="UNPAID_FINE_RESTRICTION"
+    paid=client.post(f"/api/v1/fines/{fine['id']}/pay",headers=auth_headers,json={"note":"Paid at circulation desk"})
+    assert paid.status_code==200 and paid.json()["status"]=="paid"
+    allowed=client.post("/api/v1/borrowings",json={"user_id":payload["user_id"],"book_copy_id":second["id"],"user_verification_token":payload["user_verification_token"],"book_verification_token":second["verification_token"]})
+    assert allowed.status_code==201
 
 def test_inactive_user_unavailable_limit_and_overdue(db_factory):
     with db_factory() as db:

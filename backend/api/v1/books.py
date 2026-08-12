@@ -1,4 +1,7 @@
+import csv
+from io import StringIO
 from fastapi import APIRouter,Depends,File,HTTPException,Query,UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func,select
 from sqlalchemy.orm import Session,joinedload
 from backend.core.database import get_db
@@ -13,11 +16,40 @@ from backend.services.serialization import book_dict
 from backend.services.media_service import store_image
 
 router=APIRouter(prefix="/books",tags=["Books"])
+@router.get("/export.csv")
+def export_csv(_admin:Admin=Depends(get_current_admin),db:Session=Depends(get_db)):
+    output=StringIO();writer=csv.writer(output);writer.writerow(["isbn","title","author","publisher","publication_year","category","shelf_location","description","keywords","subjects","copies"])
+    for book in db.scalars(select(Book).options(joinedload(Book.category)).where(Book.is_archived.is_(False)).order_by(Book.title)):
+        data=book_dict(db,book);writer.writerow([data.get("isbn"),data.get("title"),data.get("author"),data.get("publisher"),data.get("publication_year"),data.get("category"),data.get("shelf_location"),data.get("description"),"|".join(data.get("keywords") or []),"|".join(data.get("subjects") or []),data.get("total_copies",0)])
+    return StreamingResponse(iter([output.getvalue()]),media_type="text/csv",headers={"Content-Disposition":"attachment; filename=librai-books.csv"})
+
+@router.post("/import.csv")
+async def import_csv(file:UploadFile=File(...),admin:Admin=Depends(get_current_admin),db:Session=Depends(get_db)):
+    if file.content_type not in {"text/csv","application/csv","application/vnd.ms-excel"}:raise HTTPException(422,"Upload a CSV file.")
+    raw=await file.read(2*1024*1024+1)
+    if len(raw)>2*1024*1024:raise HTTPException(413,"CSV file is too large.")
+    try: rows=list(csv.DictReader(StringIO(raw.decode("utf-8-sig"))))
+    except UnicodeDecodeError as exc:raise HTTPException(422,"CSV must be UTF-8 encoded.") from exc
+    required={"isbn","title","author","category","shelf_location"}
+    if not rows:raise HTTPException(422,"CSV contains no book rows.")
+    if not required.issubset(set(rows[0].keys() or [])):raise HTTPException(422,f"CSV must contain: {', '.join(sorted(required))}.")
+    created=[]
+    try:
+        for row in rows:
+            copies=max(0,int(row.get("copies") or 0))
+            category=get_or_create_category(db,None,row["category"].strip())
+            book=Book(isbn=row["isbn"].strip(),title=row["title"].strip(),author=row["author"].strip(),publisher=row.get("publisher") or None,publication_year=int(row["publication_year"]) if row.get("publication_year") else None,category_id=category.id,shelf_location=row["shelf_location"].strip(),description=row.get("description") or None,keywords=[x.strip() for x in (row.get("keywords") or "").split("|") if x.strip()],subjects=[x.strip() for x in (row.get("subjects") or "").split("|") if x.strip()]);db.add(book);db.flush()
+            for index in range(copies):db.add(BookCopy(book_id=book.id,accession_number=f"BK-{book.id:05d}-C{index+1:03d}",qr_token=make_qr_token("BOOK_QR"),status=CopyStatus.AVAILABLE))
+            created.append(book.id)
+        audit(db,"BOOKS_IMPORTED","book",None,admin=admin,details={"count":len(created),"book_ids":created});db.commit()
+    except Exception as exc:
+        db.rollback();raise HTTPException(422,"CSV import failed. No records were imported.") from exc
+    return {"imported":len(created),"book_ids":created}
 @router.get("")
-def list_books(q:str|None=None,offset:int=Query(0,ge=0),limit:int=Query(50,ge=1,le=100),include_archived:bool=False,admin:Admin|None=Depends(get_optional_admin),db:Session=Depends(get_db)):
+def list_books(q:str|None=None,category:str|None=None,author:str|None=None,shelf_location:str|None=None,available_only:bool=False,offset:int=Query(0,ge=0),limit:int=Query(50,ge=1,le=100),include_archived:bool=False,admin:Admin|None=Depends(get_optional_admin),db:Session=Depends(get_db)):
     if include_archived and not admin:raise HTTPException(403,"Admin access is required to include archived books.")
     if not include_archived:
-        items,total=search_books(db,q=q,offset=offset,limit=limit);return {"items":items,"total":total}
+        items,total=search_books(db,q=q,category=category,author=author,shelf_location=shelf_location,available_only=available_only,offset=offset,limit=limit);return {"items":items,"total":total}
     stmt=select(Book).options(joinedload(Book.category));total=db.scalar(select(func.count(Book.id))) or 0;return {"items":[book_dict(db,b) for b in db.scalars(stmt.offset(offset).limit(limit))],"total":total}
 @router.post("",status_code=201)
 def create_book(payload:BookCreate,admin:Admin=Depends(get_current_admin),db:Session=Depends(get_db)):

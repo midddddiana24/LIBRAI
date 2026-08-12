@@ -13,6 +13,7 @@ from core.config   import settings
 from core.constants import APP_NAME, Routes
 from core.state    import get_state
 from core.theme    import Colors, Radius, Spacing
+from services.api_client import api_client
 
 
 def AppHeader(
@@ -24,6 +25,11 @@ def AppHeader(
 ) -> ft.Container:
     state   = get_state(page)
     compact = (getattr(page, "width", None) or 1366) < 820
+    health = api_client.health()
+    health_data = health.data if health.ok and isinstance(health.data, dict) else {}
+    health_ok = health.ok and health_data.get("status") == "healthy"
+    health_label = "API ready · DB connected · Gemini ready" if health_ok else "Offline mode · reconnect required"
+    health_color = Colors.SUCCESS if health_ok else Colors.ERROR
 
     # ── Left cluster ──────────────────────────────────────────
     left: list[ft.Control] = []
@@ -132,6 +138,17 @@ def AppHeader(
                 on_click=lambda _e: page.go(Routes.HOME),
             )
         )
+
+    right.append(ft.Container(
+        padding=ft.padding.symmetric(horizontal=8, vertical=5),
+        border_radius=Radius.PILL,
+        bgcolor=Colors.SUCCESS_BG if health_ok else Colors.ERROR_BG,
+        content=ft.Row(spacing=5, controls=[
+            ft.Icon(ft.Icons.CLOUD_DONE_OUTLINED if health_ok else ft.Icons.CLOUD_OFF_OUTLINED, size=14, color=health_color),
+            *([] if compact else [ft.Text(health_label, size=10, color=health_color, weight=ft.FontWeight.W_600)]),
+        ]),
+        tooltip=f"{health_label}. API, database, and Gemini configuration status.",
+    ))
 
     return ft.Container(
         height=64,

@@ -32,3 +32,17 @@ def test_ai_database_fallback(client,monkeypatch):
     assert "python" in data["parsed_intent"]["topics"]
     feedback=client.post("/api/v1/ai/feedback",json={"interaction_id":data["interaction_id"],"helpful":True})
     assert feedback.status_code==201
+
+
+def test_ai_uses_gemini_ranking_when_available(client,monkeypatch):
+    ranking=type("Ranking",(),{"message":"Start with this Python title.","recommendations":[type("Item",(),{"book_id":1,"reason":"It matches beginner Python."})()]})()
+    monkeypatch.setattr(gemini_client,"rank",lambda *_args,**_kwargs:ranking)
+    response=client.post("/api/v1/ai/search",json={"query":"beginner Python programming"});assert response.status_code==200
+    data=response.json();assert data["fallback_used"] is False and data["ai_available"] is True
+    assert data["answer"]=="Start with this Python title."
+    assert data["books"][0]["id"]==1 and data["books"][0]["why_match"]=="It matches beginner Python."
+
+def test_ai_handles_greeting_as_conversation(client,monkeypatch):
+    monkeypatch.setattr(gemini_client,"rank",lambda *_args,**_kwargs: (_ for _ in ()).throw(AssertionError("catalog AI should not run for greetings")))
+    response=client.post("/api/v1/ai/search",json={"query":"hello"});assert response.status_code==200
+    data=response.json();assert data["response_type"]=="conversation" and data["books"]==[] and "Hello" in data["answer"]

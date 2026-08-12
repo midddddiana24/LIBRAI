@@ -52,7 +52,7 @@ def verify_user(payload:QRVerifyRequest,db:Session=Depends(get_db)):
 def verify_book(payload:QRVerifyRequest,db:Session=Depends(get_db)):
     copy=db.scalar(select(BookCopy).options(joinedload(BookCopy.book)).where(BookCopy.qr_token==payload.resolved_token))
     if not copy:raise HTTPException(status_code=404,detail="Invalid book QR code.")
-    b=copy.book;return {"id":copy.id,"book_copy_id":copy.id,"copy_id":copy.accession_number,"accession_number":copy.accession_number,"book_id":b.id,"title":b.title,"author":b.author,"category":b.category.name,"shelf_location":b.shelf_location,"available":copy.status==CopyStatus.AVAILABLE,"availability":copy.status,"can_borrow":copy.status==CopyStatus.AVAILABLE,"cover_url":b.cover_image,"verification_token":create_book_grant(copy.id)}
+    b=copy.book;return {"id":copy.id,"book_copy_id":copy.id,"copy_id":copy.accession_number,"accession_number":copy.accession_number,"book_id":b.id,"title":b.title,"author":b.author,"isbn":b.isbn,"publisher":b.publisher,"publication_year":b.publication_year,"description":b.description,"keywords":b.keywords or [],"subjects":b.subjects or [],"category":b.category.name if b.category else None,"shelf_location":b.shelf_location,"available":copy.status==CopyStatus.AVAILABLE,"availability":copy.status,"can_borrow":copy.status==CopyStatus.AVAILABLE,"cover_url":b.cover_image,"verification_token":create_book_grant(copy.id)}
 
 @router.post("/users/{user_id}/qr")
 def rotate_user_qr(user_id:int,admin:Admin=Depends(get_current_admin),db:Session=Depends(get_db)):

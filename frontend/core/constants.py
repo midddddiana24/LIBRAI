@@ -40,6 +40,8 @@ class Routes:
     ADMIN_REPORTS = "/admin/reports"
     ADMIN_AUDIT_LOGS = "/admin/audit-logs"
     ADMIN_SETTINGS = "/admin/settings"
+    ADMIN_FINES = "/admin/fines"
+    ADMIN_EMAIL_DELIVERIES = "/admin/email-deliveries"
 
 
 # ----------------------------------------------------------------------

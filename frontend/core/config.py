@@ -11,6 +11,7 @@ environment variables. Environment variables always take precedence.
 from __future__ import annotations
 
 import os
+import secrets
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -69,6 +70,7 @@ class Settings:
     # Local kiosk laptop camera opened by the Python frontend process.
     camera_index: int = _get_int("LIBRAI_CAMERA_INDEX", 0)
     frontend_upload_directory: Path = Path(os.getenv("LIBRAI_FRONTEND_UPLOAD_DIRECTORY", "generated/frontend_uploads")).resolve()
+    flet_secret_key: str = os.getenv("FLET_SECRET_KEY") or secrets.token_urlsafe(32)
 
 
 settings = Settings()

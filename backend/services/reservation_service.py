@@ -4,8 +4,9 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from backend.core.exceptions import DomainError
-from backend.models.entities import Book, BookCopy, Borrowing, BorrowingStatus, CopyStatus, Notification, Reservation, ReservationStatus, User, UserStatus
+from backend.models.entities import Book, BookCopy, Borrowing, BorrowingStatus, CopyStatus, Reservation, ReservationStatus, User, UserStatus
 from backend.services.audit_service import audit
+from backend.services.notification_service import notify_user
 from backend.services.policy_service import reservation_hold_days
 
 
@@ -31,7 +32,7 @@ def expire_reservations(db: Session) -> int:
         if copy and next_in_line:
             next_in_line.status = ReservationStatus.READY
             next_in_line.expires_at = now + __import__("datetime").timedelta(days=reservation_hold_days(db))
-            db.add(Notification(user_id=next_in_line.user_id, type="RESERVATION_AVAILABLE", message=f"{next_in_line.book.title} is ready for pickup."))
+            notify_user(db, next_in_line.user_id, "RESERVATION_AVAILABLE", f"{next_in_line.book.title} is ready for pickup until {next_in_line.expires_at.date().isoformat()}.", subject="LIBRAI: Reserved book ready")
         elif copy:
             copy.status = CopyStatus.ARCHIVED if copy.book.is_archived else CopyStatus.AVAILABLE
         audit(db,"RESERVATION_EXPIRED","reservation",reservation.id,actor_type="SYSTEM")
@@ -53,7 +54,7 @@ def create_reservation(db: Session, user_id: int, book_id: int) -> tuple[Reserva
     if existing: raise DomainError("DUPLICATE_RESERVATION", "The user already has an active reservation for this title.")
     reservation = Reservation(user_id=user_id, book_id=book_id, status=ReservationStatus.ACTIVE); db.add(reservation); db.flush()
     position = db.scalar(select(func.count(Reservation.id)).where(Reservation.book_id == book_id, Reservation.status == ReservationStatus.ACTIVE, Reservation.reserved_at <= reservation.reserved_at)) or 1
-    db.add(Notification(user_id=user_id, type="RESERVATION_CREATED", message=f"Reservation created for {book.title}; queue position {position}.")); audit(db,"RESERVATION_CREATED","reservation",reservation.id,actor_type="KIOSK",actor_id=user_id)
+    notify_user(db, user_id, "RESERVATION_CREATED", f"Reservation created for {book.title}; queue position {position}.", subject="LIBRAI: Reservation created"); audit(db,"RESERVATION_CREATED","reservation",reservation.id,actor_type="KIOSK",actor_id=user_id)
     try:
         db.commit(); db.refresh(reservation); return reservation, position
     except IntegrityError as exc:

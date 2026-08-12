@@ -5,13 +5,14 @@ from backend.models.entities import Book, BookCopy, Category, CopyStatus, Search
 from backend.services.serialization import book_dict
 
 
-def search_books(db: Session, q=None, category=None, author=None, available_only=False, publication_year=None, offset=0, limit=50, user_id=None, search_type="traditional", sort="title") -> tuple[list[dict], int]:
+def search_books(db: Session, q=None, category=None, author=None, available_only=False, publication_year=None, shelf_location=None, offset=0, limit=50, user_id=None, search_type="traditional", sort="title") -> tuple[list[dict], int]:
     stmt = select(Book).options(joinedload(Book.category)).where(Book.is_archived.is_(False))
     if q:
         term = f"%{q.strip().lower()}%"
         stmt = stmt.where(or_(func.lower(Book.title).like(term), func.lower(Book.author).like(term), func.lower(Book.isbn).like(term), func.lower(Book.description).like(term), func.lower(cast(Book.keywords, String)).like(term), func.lower(cast(Book.subjects, String)).like(term)))
     if category: stmt = stmt.join(Book.category).where(func.lower(Category.name) == category.lower())
     if author: stmt = stmt.where(func.lower(Book.author).like(f"%{author.lower()}%"))
+    if shelf_location: stmt = stmt.where(func.lower(Book.shelf_location).like(f"%{shelf_location.lower()}%"))
     if publication_year: stmt = stmt.where(Book.publication_year == publication_year)
     if available_only: stmt = stmt.where(Book.copies.any(BookCopy.status == CopyStatus.AVAILABLE))
     count = db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from admin import books_page, dashboard_page, login_page, management_page, reports_page, settings_page, users_page
+from admin import books_page, dashboard_page, email_deliveries_page, fines_page, login_page, management_page, reports_page, settings_page, users_page
 from core.constants import Routes
 from core.state import get_state
 from services.auth_service import auth_service
@@ -45,6 +45,8 @@ def build_view(route,page):
     if route==Routes.ADMIN_USERS:return users_page.build(page)
     if route==Routes.ADMIN_REPORTS:return reports_page.build(page)
     if route==Routes.ADMIN_SETTINGS:return settings_page.build(page)
+    if route==Routes.ADMIN_FINES:return fines_page.build(page)
+    if route==Routes.ADMIN_EMAIL_DELIVERIES:return email_deliveries_page.build(page)
     if route in CONFIG:
         title,endpoint,description,add=CONFIG[route]
         return management_page.build(page,route,title,endpoint,description,add)

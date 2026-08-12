@@ -99,12 +99,16 @@ class ImagePickerControl:
         self.status.value = f"Uploading {selected.name}…"
         self.status.color = Colors.PRIMARY
         self.page.update()
-        self.picker.upload([
-            ft.FilePickerUploadFile(
-                name=selected.name,
-                upload_url=self.page.get_upload_url(staged_name, 600),
-            )
-        ])
+        try:
+            upload_url = self.page.get_upload_url(staged_name, 600)
+            self.picker.upload([
+                ft.FilePickerUploadFile(name=selected.name, upload_url=upload_url)
+            ])
+        except Exception as exc:
+            self.progress.visible = False
+            self.status.value = "Image upload is not configured. Set FLET_SECRET_KEY and restart LIBRAI."
+            self.status.color = Colors.ERROR
+            self.page.update()
 
     def _uploaded(self, event) -> None:
         if event.error:

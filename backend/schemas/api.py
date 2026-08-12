@@ -107,6 +107,10 @@ class NotificationReadRequest(BaseModel):
     verification_token: str | None = None
 
 
+class FinePaymentRequest(BaseModel):
+    note: str | None = Field(default=None, max_length=500)
+
+
 class ReservationCreate(BaseModel):
     user_id: int
     book_id: int
@@ -134,7 +138,7 @@ class AIFeedbackRequest(BaseModel):
 
 
 class ReportExportRequest(BaseModel):
-    report_type: Literal["daily_borrowing", "weekly_borrowing", "monthly_borrowing", "overdue", "inventory", "most_borrowed", "popular_categories", "user_activity"]
+    report_type: Literal["daily_borrowing", "weekly_borrowing", "monthly_borrowing", "overdue", "inventory", "most_borrowed", "popular_categories", "user_activity", "unpaid_fines"]
     start_date: date | None = None
     end_date: date | None = None
     format: Literal["pdf", "csv", "xlsx"] = "pdf"

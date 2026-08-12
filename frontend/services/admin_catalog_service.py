@@ -11,11 +11,17 @@ class AdminCatalogService:
         if result.ok and isinstance(result.data, dict) and result.data.get("download_url"):
             result.data["download_url"] = api_client.resolve_url(result.data["download_url"])
         return result
-    def list_books(self, query: str | None = None, offset: int = 0, limit: int = 25, include_archived: bool = False):
+    def list_books(self, query: str | None = None, category: str | None = None, author: str | None = None, shelf_location: str | None = None, available_only: bool = False, offset: int = 0, limit: int = 25, include_archived: bool = False):
         return api_client.get(
             "/books",
-            params={"q": query or None, "offset": offset, "limit": limit, "include_archived": include_archived},
+            params={"q": query or None, "category": category or None, "author": author or None, "shelf_location": shelf_location or None, "available_only": available_only, "offset": offset, "limit": limit, "include_archived": include_archived},
         )
+
+    def export_books(self):
+        return api_client.get("/books/export.csv")
+
+    def import_books(self, file_path: str):
+        return api_client.upload_file("/books/import.csv", file_path)
 
     def create_book(self, payload: dict):
         return api_client.post("/books", payload)

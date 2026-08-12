@@ -364,6 +364,8 @@ def build(page: ft.Page) -> ft.View:
     attention_rows = [
         ("Overdue Items",      overdue,      "overdue"   if overdue      else "active", Routes.ADMIN_BORROWINGS),
         ("Reservation Queue",  reservations, "reserved"  if reservations else "active", Routes.ADMIN_RESERVATIONS),
+        ("Unpaid Fines",       int(data.get("unpaid_fines", 0)), "overdue" if data.get("unpaid_fines", 0) else "active", Routes.ADMIN_FINES),
+        ("Failed Email Queue", int(data.get("failed_email_deliveries", 0)), "overdue" if data.get("failed_email_deliveries", 0) else "active", Routes.ADMIN_EMAIL_DELIVERIES),
     ]
 
     attention = section_card(

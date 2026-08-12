@@ -152,3 +152,22 @@ def test_settings_bulk_update_is_atomic(client, auth_headers):
     assert rejected.status_code == 422
     current = client.get("/api/v1/settings", headers=auth_headers).json()
     assert current["BORROWING_LIMIT"] == "4"
+
+
+def test_catalog_csv_round_trip_and_audit_filters(client, auth_headers):
+    csv_body = "isbn,title,author,publisher,publication_year,category,shelf_location,description,keywords,subjects,copies\n9780000000777,Imported Systems,Test Author,Test Press,2024,Technology,T-010,Imported title,python|systems,computing|systems,2\n"
+    imported = client.post("/api/v1/books/import.csv", headers=auth_headers, files={"file": ("catalog.csv", csv_body.encode(), "text/csv")})
+    assert imported.status_code == 200
+    assert imported.json()["imported"] == 1
+
+    exported = client.get("/api/v1/books/export.csv", headers=auth_headers)
+    assert exported.status_code == 200
+    assert "Imported Systems" in exported.text
+    assert "text/csv" in exported.headers["content-type"]
+
+    filtered = client.get("/api/v1/audit-logs?actor_type=ADMIN", headers=auth_headers)
+    assert filtered.status_code == 200
+    assert all(row["actor_type"] == "ADMIN" for row in filtered.json()["items"])
+    audit_csv = client.get("/api/v1/audit-logs/export.csv?actor_type=ADMIN", headers=auth_headers)
+    assert audit_csv.status_code == 200
+    assert "BOOKS_IMPORTED" in audit_csv.text

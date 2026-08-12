@@ -90,7 +90,7 @@ def QRScannerView(page: ft.Page, title: str, subtitle: str, on_scan: Callable[[s
         set_phase(0)
         page.update()
 
-    def deliver_decoded(value: str) -> None:
+    async def deliver_decoded(value: str) -> None:
         """Run API verification in Flet's normal handler executor.
 
         The camera loop runs on the page asyncio loop. Performing the blocking
@@ -100,7 +100,10 @@ def QRScannerView(page: ft.Page, title: str, subtitle: str, on_scan: Callable[[s
         try:
             app_state.touch()
             verification_state["running"] = True
-            result = on_scan(value)
+            # QR verification performs blocking HTTP work. Keep it off the
+            # Flet event loop, then apply the result back on the UI loop so
+            # page.go() reliably dispatches the next kiosk step.
+            result = await asyncio.to_thread(on_scan, value)
             verification_state["running"] = False
             if result is not None and getattr(result, "ok", True) is False:
                 status.value = str(getattr(result, "message", "QR verification failed."))
@@ -262,7 +265,7 @@ def QRScannerView(page: ft.Page, title: str, subtitle: str, on_scan: Callable[[s
             camera_button.disabled = False
             stop_button.visible = False
         if decoded and page.route == initial_route:
-            page.run_thread(deliver_decoded, decoded.strip())
+            page.run_task(deliver_decoded, decoded.strip())
 
     def start_camera(_event) -> None:
         app_state.touch()

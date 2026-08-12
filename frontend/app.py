@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -82,6 +83,7 @@ def main(page: ft.Page) -> None:
 
 
 if __name__ == "__main__":
+    os.environ.setdefault("FLET_SECRET_KEY", settings.flet_secret_key)
     settings.frontend_upload_directory.mkdir(parents=True, exist_ok=True)
     ft.app(
         target=main,

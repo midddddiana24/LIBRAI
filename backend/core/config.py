@@ -13,13 +13,24 @@ class Settings(BaseSettings):
     secret_key: str = "development-only-change-this-secret-key"
     access_token_expire_minutes: int = 60
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-flash-lite-latest"
+    gemini_timeout_seconds: float = 12.0
+    gemini_retry_count: int = 1
+    gemini_cache_seconds: int = 300
     cors_origins: list[str] | str = ["http://127.0.0.1:8550", "http://localhost:8550"]
     report_directory: Path = Path("generated/reports")
     max_upload_bytes: int = 5 * 1024 * 1024
+    rate_limit_window_seconds: int = 60
+    rate_limit_requests_per_window: int = 30
     default_borrowing_limit: int = 3
     default_borrowing_period_days: int = 7
     default_allow_borrow_with_overdue: bool = False
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+    smtp_use_tls: bool = True
 
     model_config = SettingsConfigDict(env_file=".env", env_prefix="", case_sensitive=False, extra="ignore")
 
@@ -39,6 +50,13 @@ class Settings(BaseSettings):
     def protect_production_secret(self):
         if self.environment.lower() == "production" and (self.secret_key == "development-only-change-this-secret-key" or len(self.secret_key) < 32):
             raise ValueError("Production SECRET_KEY must be a unique value of at least 32 characters.")
+        if self.environment.lower() == "production":
+            if not self.gemini_api_key:
+                raise ValueError("Production GEMINI_API_KEY must be configured.")
+            if any(origin == "*" for origin in self.cors_origins):
+                raise ValueError("Production CORS_ORIGINS cannot contain '*'.")
+            if any(value in {"replace-with-at-least-32-random-characters", "development-only-change-this-secret-key"} for value in (self.secret_key,)):
+                raise ValueError("Production secrets must not use development placeholders.")
         return self
 
 

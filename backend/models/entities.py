@@ -48,6 +48,18 @@ class ReservationStatus(StrEnum):
     EXPIRED = "EXPIRED"
 
 
+class FineStatus(StrEnum):
+    UNPAID = "UNPAID"
+    PAID = "PAID"
+    WAIVED = "WAIVED"
+
+
+class EmailDeliveryStatus(StrEnum):
+    PENDING = "PENDING"
+    SENT = "SENT"
+    FAILED = "FAILED"
+
+
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
@@ -78,6 +90,7 @@ class User(TimestampMixin, Base):
     pin_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(30), default=UserStatus.ACTIVE, index=True)
     borrowings: Mapped[list["Borrowing"]] = relationship(back_populates="user")
+    fines: Mapped[list["Fine"]] = relationship(back_populates="user")
 
     @property
     def display_name(self) -> str:
@@ -126,6 +139,7 @@ class Borrowing(Base):
     __tablename__ = "borrowings"
     __table_args__ = (
         Index("ix_borrowing_active_copy", "book_copy_id", "status"),
+        Index("ix_borrowing_user_status_due", "user_id", "status", "due_at"),
         Index("uq_borrowing_one_active_per_copy", "book_copy_id", unique=True, sqlite_where=text("status IN ('ACTIVE','OVERDUE')"), postgresql_where=text("status IN ('ACTIVE','OVERDUE')")),
     )
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -141,6 +155,22 @@ class Borrowing(Base):
     user: Mapped[User] = relationship(back_populates="borrowings")
     book_copy: Mapped[BookCopy] = relationship(back_populates="borrowings")
     renewals: Mapped[list["RenewalHistory"]] = relationship(back_populates="borrowing", cascade="all, delete-orphan")
+    fines: Mapped[list["Fine"]] = relationship(back_populates="borrowing")
+
+
+class Fine(TimestampMixin, Base):
+    __tablename__ = "fines"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    borrowing_id: Mapped[int | None] = mapped_column(ForeignKey("borrowings.id", ondelete="SET NULL"), nullable=True, index=True)
+    amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    reason: Mapped[str] = mapped_column(String(120), default="OVERDUE")
+    status: Mapped[str] = mapped_column(String(30), default=FineStatus.UNPAID, index=True)
+    assessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    user: Mapped[User] = relationship(back_populates="fines")
+    borrowing: Mapped[Borrowing | None] = relationship(back_populates="fines")
 
 
 class RenewalHistory(Base):
@@ -211,6 +241,20 @@ class Notification(Base):
     message: Mapped[str] = mapped_column(Text)
     is_read: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class EmailDelivery(Base):
+    __tablename__ = "email_deliveries"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    notification_id: Mapped[int | None] = mapped_column(ForeignKey("notifications.id", ondelete="SET NULL"), nullable=True, index=True)
+    recipient: Mapped[str] = mapped_column(String(255), index=True)
+    subject: Mapped[str] = mapped_column(String(255))
+    body: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(30), default=EmailDeliveryStatus.PENDING, index=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class AuditLog(Base):

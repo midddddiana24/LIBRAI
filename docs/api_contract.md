@@ -94,6 +94,10 @@ short-lived user verification grant. Administrators retain authenticated access.
 | GET | `/returns` | Admin | pagination → returned transactions | Read-only history. |
 
 Due dates and statuses supplied by clients are ignored because those fields are not accepted.
+Borrowing also rejects users with unpaid fines when
+`BLOCK_BORROW_WITH_UNPAID_FINES=true`; the conflict code is
+`UNPAID_FINE_RESTRICTION`. Return processing assesses configured overdue fines
+before closing the transaction.
 
 ## Reservations and notifications
 
@@ -104,6 +108,20 @@ Due dates and statuses supplied by clients are ignored because those fields are 
 | DELETE | `/reservations/{id}` | Admin | none → cancelled status | Only ACTIVE/READY can cancel. |
 | GET | `/notifications?user_id=` | Admin | none → notification array | In-system delivery foundation. |
 | POST | `/notifications/{id}/read` | Admin | none → read status | `404`. |
+
+## Fines and email delivery foundation
+
+Overdue fines are assessed by the backend during return processing. The default
+fine is PHP 5.00 per overdue day (`OVERDUE_FINE_PER_DAY_CENTS=500`), and
+borrowing is blocked while unpaid fines exist when
+`BLOCK_BORROW_WITH_UNPAID_FINES=true`. User-facing events create both an
+in-system notification and a pending `email_deliveries` row when the user has an
+email address; a later SMTP worker can send those queued emails.
+
+| Method | URL | Auth | Request -> response | Rules/errors |
+|---|---|---|---|---|
+| GET | `/fines` | Admin, or matching user QR grant | `user_id,status,verification_token?` -> `{items,total}` | Kiosk users can only read their own fines with a matching grant. |
+| POST | `/fines/{id}/pay` | Admin | `{note?}` -> paid fine | Only unpaid fines can be marked paid; audited and notifies the user. |
 
 ## Administration, settings, reports, audit
 

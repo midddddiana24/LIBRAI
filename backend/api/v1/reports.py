@@ -13,7 +13,7 @@ from backend.services.audit_service import audit
 from backend.services.report_service import report_data
 router=APIRouter(prefix="/reports",tags=["Reports"])
 @router.get("")
-def preview(report_type:Literal["daily_borrowing","weekly_borrowing","monthly_borrowing","overdue","inventory","most_borrowed","popular_categories","user_activity"]="daily_borrowing",start_date:date|None=None,end_date:date|None=None,_admin:Admin=Depends(get_current_admin),db:Session=Depends(get_db)):
+def preview(report_type:Literal["daily_borrowing","weekly_borrowing","monthly_borrowing","overdue","inventory","most_borrowed","popular_categories","user_activity","unpaid_fines"]="daily_borrowing",start_date:date|None=None,end_date:date|None=None,_admin:Admin=Depends(get_current_admin),db:Session=Depends(get_db)):
     if start_date and end_date and start_date>end_date:raise HTTPException(422,"Start date must be on or before end date.")
     headers,rows=report_data(db,report_type,start_date,end_date);return {"report_type":report_type,"headers":headers,"items":rows[:100],"total":len(rows)}
 @router.post("/export",status_code=201)

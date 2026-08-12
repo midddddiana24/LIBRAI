@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import flet as ft
 
 from components.admin_ui import admin_search_field, admin_text_field, form_section, page_intro, section_card, status_badge
@@ -11,6 +12,7 @@ from components.loading_view import InlineLoading, set_button_loading
 from components.sidebar import AdminView
 from core.theme import Colors, Radius, Spacing
 from services.management_service import management_service
+from utils.formatting import format_date
 
 
 def build(page, route, title, endpoint, description, allow_add=False):
@@ -18,6 +20,19 @@ def build(page, route, title, endpoint, description, allow_add=False):
     notice = ft.Column(spacing=Spacing.SM)
     search = admin_search_field(hint_text=f"Search {title.lower()}…", expand=True)
     count_text = ft.Text("", size=11, color=Colors.TEXT_SECONDARY)
+    page_index = 0
+    page_size = 25
+
+    def circulation_summary(row: dict) -> tuple[str, str, str, str]:
+        user_name = str(row.get("user_name") or row.get("user") or "Unknown user")
+        student_id = str(row.get("student_id") or "No student number")
+        if endpoint == "/borrowings":
+            return (str(row.get("book_title") or "Untitled book"), f"Borrowed by {user_name} ({student_id})", f"{row.get('transaction_id', 'Borrowing')}  •  Borrowed {format_date(row.get('borrowed_at'))}  •  Due {format_date(row.get('due_at'))}", ft.Icons.MENU_BOOK_OUTLINED)
+        if endpoint == "/returns":
+            return (str(row.get("book") or row.get("book_title") or "Untitled book"), f"Returned by {user_name} ({student_id})", f"Returned {format_date(row.get('returned_at'))}", ft.Icons.KEYBOARD_RETURN_ROUNDED)
+        if endpoint == "/reservations":
+            return (str(row.get("book_title") or "Untitled book"), f"Reserved by {user_name} ({student_id})", f"Queue position {row.get('position') or '—'}  •  Reserved {format_date(row.get('reserved_at'))}", ft.Icons.BOOKMARK_BORDER_ROUNDED)
+        return (str(row.get("title") or row.get("name") or f"Record {row.get('id', '')}"), "", "", ft.Icons.RECEIPT_LONG_OUTLINED)
 
     def show_details(row: dict) -> None:
         detail_rows = [
@@ -42,16 +57,40 @@ def build(page, route, title, endpoint, description, allow_add=False):
         page.open(dialog)
 
     def load(_event=None, show_loading: bool = True) -> None:
+        if hasattr(page, "run_task"):
+            page.run_task(load_async, show_loading)
+        else:  # lightweight route-test page
+            load_async_sync_for_test(show_loading)
+
+    async def load_async(show_loading: bool = True) -> None:
+        nonlocal page_index
+        # The page must be attached before an async result can update its
+        # controls. Starting immediately during build can leave the initial
+        # loading surface visible forever when the API responds very quickly.
+        await asyncio.sleep(0.05)
         if show_loading:
             results.controls = [InlineLoading(f"Loading {title.lower()}…")]
             page.update()
-        response = management_service.list(endpoint, str(search.value or "").strip() or None)
+        try:
+            response = await asyncio.to_thread(
+                management_service.list,
+                endpoint,
+                str(search.value or "").strip() or None,
+                page_index * page_size,
+                page_size,
+            )
+        except Exception as exc:
+            results.controls = [Alert("server_error", f"Could not load {title.lower()}: {exc}", title="Loading failed")]
+            page.update()
+            return
         results.controls.clear()
         if not response.ok:
             count_text.value = "Unable to load records"
             results.controls.append(Alert(response.error_kind, response.message))
         else:
             rows = response.data.get("items", []) if isinstance(response.data, dict) else response.data
+            rows = rows if isinstance(rows, list) else []
+            rows = [row if isinstance(row, dict) else {"value": row} for row in rows]
             if search.value:
                 needle = str(search.value).strip().lower()
                 rows = [row for row in rows if needle in " ".join(str(value).lower() for value in row.values())]
@@ -59,20 +98,34 @@ def build(page, route, title, endpoint, description, allow_add=False):
             if not rows:
                 results.controls.append(EmptyState(f"No {title.lower()} found", description))
             for row in rows:
-                primary = row.get("title") or row.get("name") or row.get("book") or row.get("action") or f"Record {row.get('id', '')}"
+                if not isinstance(row, dict):
+                    row = {"value": row}
+                primary, person_line, detail_line, record_icon = circulation_summary(row)
                 status = row.get("status")
-                secondary_values = [str(value) for key, value in row.items() if key not in {"id", "title", "name", "book", "action", "status"} and value is not None]
+                secondary_values = []
                 results.controls.append(
                     ft.Container(
                         bgcolor=Colors.SURFACE,
                         border=ft.border.all(1, Colors.BORDER),
                         border_radius=Radius.XL,
-                        padding=ft.padding.symmetric(horizontal=Spacing.LG, vertical=Spacing.MD),
+                        padding=ft.padding.symmetric(horizontal=Spacing.LG, vertical=14),
                         content=ft.Row(
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                             controls=[
-                                ft.Container(width=38, height=38, border_radius=Radius.MD, bgcolor=Colors.PRIMARY_MUTED, alignment=ft.alignment.center, content=ft.Icon(ft.Icons.RECEIPT_LONG_OUTLINED, size=18, color=Colors.PRIMARY)),
-                                ft.Column(expand=True, tight=True, spacing=3, controls=[ft.Text(str(primary), size=13, weight=ft.FontWeight.W_700), ft.Text(" · ".join(secondary_values), size=11, color=Colors.TEXT_SECONDARY, max_lines=2, overflow=ft.TextOverflow.ELLIPSIS)]),
+                                ft.Container(width=42, height=42, border_radius=Radius.MD, bgcolor=Colors.PRIMARY_MUTED, alignment=ft.alignment.center, content=ft.Icon(record_icon, size=19, color=Colors.PRIMARY)),
+                                ft.Container(
+                                    expand=True,
+                                    content=ft.Column(
+                                        tight=True,
+                                        spacing=3,
+                                        controls=[
+                                            ft.Text(str(primary), size=13, weight=ft.FontWeight.W_700),
+                                            ft.Text(person_line, size=12, color=Colors.TEXT_PRIMARY, max_lines=1),
+                                            ft.Text(detail_line, size=11, color=Colors.TEXT_SECONDARY, max_lines=1),
+                                            ft.Text(" · ".join(secondary_values), size=11, color=Colors.TEXT_SECONDARY, max_lines=2),
+                                        ],
+                                    ),
+                                ),
                                 *([status_badge(status)] if status else []),
                                 ft.IconButton(ft.Icons.ARROW_FORWARD_IOS_ROUNDED, icon_size=14, tooltip="View details", on_click=lambda _event, item=row: show_details(item)),
                             ],
@@ -80,6 +133,11 @@ def build(page, route, title, endpoint, description, allow_add=False):
                     )
                 )
         page.update()
+
+    def load_async_sync_for_test(show_loading: bool = True) -> None:
+        """Keep constructor smoke tests usable without a Flet event loop."""
+        if show_loading:
+            results.controls = [InlineLoading(f"Loading {title.lower()}â€¦")]
 
     def open_form(_event) -> None:
         specs = ([('isbn','ISBN'),('title','Title'),('author','Author'),('publisher','Publisher'),('publication_year','Publication year'),('category','Category'),('shelf_location','Shelf location')] if endpoint == "/books" else [('student_id','Student number'),('first_name','First name'),('last_name','Last name'),('course','Course'),('year_level','Year level'),('email','Email')])
@@ -122,20 +180,42 @@ def build(page, route, title, endpoint, description, allow_add=False):
         )
         page.open(dialog)
 
+    previous_button = ft.IconButton(ft.Icons.CHEVRON_LEFT_ROUNDED, tooltip="Previous page")
+    next_button = ft.IconButton(ft.Icons.CHEVRON_RIGHT_ROUNDED, tooltip="Next page")
+
+    def previous_page(_event):
+        nonlocal page_index
+        if page_index > 0:
+            page_index -= 1
+            load()
+
+    def next_page(_event):
+        nonlocal page_index
+        page_index += 1
+        load()
+
+    previous_button.on_click = previous_page
+    next_button.on_click = next_page
     search.on_submit = load
+    # Keep the search field in the same non-wrapping toolbar pattern used by
+    # Books and Library Users. An expanded row inside a wrapping row makes
+    # Flet stretch the field vertically, producing the large gray block.
     toolbar = section_card(
         ft.Row(
-            wrap=True,
             spacing=Spacing.SM,
-            run_spacing=Spacing.SM,
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Row(expand=True, spacing=Spacing.SM, controls=[search, ft.OutlinedButton("Refresh", icon=ft.Icons.REFRESH_ROUNDED, on_click=load)]),
+                ft.Container(expand=True, content=search),
+                ft.OutlinedButton("Refresh", icon=ft.Icons.REFRESH_ROUNDED, on_click=load),
                 *([ft.FilledButton(f"Add {title.rstrip('s')}", icon=ft.Icons.ADD_ROUNDED, on_click=open_form)] if allow_add else []),
             ],
         ),
         padding=Spacing.MD,
     )
-    load(show_loading=False)
-    content = ft.Column(tight=True, spacing=Spacing.LG, horizontal_alignment=ft.CrossAxisAlignment.STRETCH, controls=[toolbar, ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[ft.Text(f"{title} records", size=16, weight=ft.FontWeight.W_700), count_text]), notice, results])
-    return AdminView(page, route, title, content, subtitle=description)
+    results.controls = [InlineLoading(f"Loading {title.lower()}â€¦")]
+    pager = ft.Row(controls=[previous_button, next_button])
+    content = ft.Column(tight=True, spacing=Spacing.LG, horizontal_alignment=ft.CrossAxisAlignment.STRETCH, controls=[toolbar, ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[ft.Text(f"{title} records", size=16, weight=ft.FontWeight.W_700), ft.Row(controls=[count_text, pager])]), notice, results])
+    view = AdminView(page, route, title, content, subtitle=description)
+    if hasattr(page, "run_task"):
+        page.run_task(load_async, False)
+    return view

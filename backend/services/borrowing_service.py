@@ -4,9 +4,11 @@ from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session, joinedload
 from backend.core.exceptions import DomainError
-from backend.models.entities import BookCopy, Borrowing, BorrowingStatus, CopyStatus, Notification, RenewalHistory, Reservation, ReservationStatus, User, UserStatus
+from backend.models.entities import BookCopy, Borrowing, BorrowingStatus, CopyStatus, RenewalHistory, Reservation, ReservationStatus, User, UserStatus
 from backend.services.audit_service import audit
-from backend.services.policy_service import allow_overdue, borrowing_limit, borrowing_period_days, max_renewals, reservation_hold_days
+from backend.services.fine_service import assess_overdue_fine, unpaid_fine_total_cents
+from backend.services.notification_service import notify_user
+from backend.services.policy_service import allow_overdue, block_borrow_with_unpaid_fines, borrowing_limit, borrowing_period_days, max_renewals, reservation_hold_days
 from backend.services.reservation_service import expire_reservations
 
 
@@ -28,6 +30,8 @@ def borrow_book(db: Session, user_id: int, copy_id: int, kiosk_id=None) -> Borro
             statuses = [BorrowingStatus.ACTIVE, BorrowingStatus.OVERDUE]
             overdue = db.scalar(select(func.count(Borrowing.id)).where(Borrowing.user_id == user_id, Borrowing.status == BorrowingStatus.OVERDUE)) or 0
             if overdue and not allow_overdue(db): raise DomainError("OVERDUE_RESTRICTION", "Return overdue books before borrowing another item.")
+            unpaid_cents = unpaid_fine_total_cents(db, user_id)
+            if unpaid_cents and block_borrow_with_unpaid_fines(db): raise DomainError("UNPAID_FINE_RESTRICTION", "Settle unpaid fines before borrowing another item.")
             active = db.scalar(select(func.count(Borrowing.id)).where(Borrowing.user_id == user_id, Borrowing.status.in_(statuses))) or 0
             if active >= borrowing_limit(db): raise DomainError("BORROWING_LIMIT_REACHED", "The user has reached the borrowing limit.")
             copy = db.scalar(select(BookCopy).where(BookCopy.id == copy_id).with_for_update())
@@ -43,7 +47,7 @@ def borrow_book(db: Session, user_id: int, copy_id: int, kiosk_id=None) -> Borro
             if claimed.rowcount != 1: raise DomainError("CONCURRENT_BORROW_CONFLICT", "This copy was borrowed by another transaction. Please scan another copy.")
             db.add(borrowing); db.flush()
             if queue and queue.user_id == user_id: queue.status = ReservationStatus.FULFILLED
-            db.add(Notification(user_id=user_id, type="BORROW_SUCCESS", message=f"Borrowed {copy.book.title}; due {borrowing.due_at.date().isoformat()}."))
+            notify_user(db, user_id, "BORROW_SUCCESS", f"Borrowed {copy.book.title}; due {borrowing.due_at.date().isoformat()}.", subject="LIBRAI: Borrow confirmed")
             audit(db, "BORROW_PERFORMED", "borrowing", borrowing.id, actor_type="KIOSK", actor_id=kiosk_id, details={"user_id": user_id, "copy_id": copy.id})
         db.commit(); db.refresh(borrowing); return borrowing
     except (IntegrityError, OperationalError) as exc:
@@ -64,13 +68,15 @@ def return_book(db: Session, borrowing_id: int) -> tuple[Borrowing, str]:
             return_status = "overdue" if now > due_at else "on_time"
             borrowing.returned_at = now; borrowing.status = BorrowingStatus.RETURNED
             copy = borrowing.book_copy
+            fine = assess_overdue_fine(db, borrowing, now) if return_status == "overdue" else None
             queue = db.scalars(select(Reservation).where(Reservation.book_id == copy.book_id, Reservation.status == ReservationStatus.ACTIVE).order_by(Reservation.reserved_at).with_for_update()).first()
             if queue:
                 copy.status = CopyStatus.RESERVED; queue.status = ReservationStatus.READY; queue.expires_at = now + timedelta(days=reservation_hold_days(db))
-                db.add(Notification(user_id=queue.user_id, type="RESERVATION_AVAILABLE", message=f"{copy.book.title} is ready for pickup."))
+                notify_user(db, queue.user_id, "RESERVATION_AVAILABLE", f"{copy.book.title} is ready for pickup until {queue.expires_at.date().isoformat()}.", subject="LIBRAI: Reserved book ready")
             else: copy.status = CopyStatus.ARCHIVED if copy.book.is_archived else CopyStatus.AVAILABLE
-            db.add(Notification(user_id=borrowing.user_id, type="RETURN_SUCCESS", message=f"Returned {copy.book.title} ({return_status.replace('_',' ')})."))
-            audit(db, "RETURN_PERFORMED", "borrowing", borrowing.id, actor_type="KIOSK", details={"copy_id": copy.id, "return_status": return_status})
+            suffix = f" Fine assessed: PHP {fine.amount_cents / 100:.2f}." if fine else ""
+            notify_user(db, borrowing.user_id, "RETURN_SUCCESS", f"Returned {copy.book.title} ({return_status.replace('_',' ')}).{suffix}", subject="LIBRAI: Return confirmed")
+            audit(db, "RETURN_PERFORMED", "borrowing", borrowing.id, actor_type="KIOSK", details={"copy_id": copy.id, "return_status": return_status, "fine_id": fine.id if fine else None})
         db.commit(); return borrowing, return_status
     except DomainError: db.rollback(); raise
 
@@ -107,7 +113,7 @@ def renew_borrowing(db: Session, borrowing_id: int, user_id: int) -> Borrowing:
             borrowing.due_at = due_at + timedelta(days=borrowing_period_days(db))
             borrowing.renewal_count += 1
             db.add(RenewalHistory(borrowing_id=borrowing.id, previous_due_at=previous, new_due_at=borrowing.due_at, actor_type="KIOSK"))
-            db.add(Notification(user_id=user_id, type="RENEWAL_SUCCESS", message=f"Renewed {borrowing.book_copy.book.title}; new due date {borrowing.due_at.date().isoformat()}."))
+            notify_user(db, user_id, "RENEWAL_SUCCESS", f"Renewed {borrowing.book_copy.book.title}; new due date {borrowing.due_at.date().isoformat()}.", subject="LIBRAI: Borrowing renewed")
             audit(db, "BORROWING_RENEWED", "borrowing", borrowing.id, actor_type="KIOSK", details={"renewal_count": borrowing.renewal_count, "new_due_at": borrowing.due_at.isoformat()})
         db.commit();db.refresh(borrowing);return borrowing
     except DomainError:

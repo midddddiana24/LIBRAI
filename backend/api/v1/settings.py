@@ -10,7 +10,7 @@ router=APIRouter(prefix="/settings",tags=["Settings"])
 def validated_value(key:str,raw) -> str:
     if key not in DEFAULTS:raise HTTPException(404,"Unsupported setting.")
     value=str(raw if raw is not None else "").strip()
-    if key=="ALLOW_BORROW_WITH_OVERDUE":
+    if key in {"ALLOW_BORROW_WITH_OVERDUE","BLOCK_BORROW_WITH_UNPAID_FINES"}:
         if value.lower() not in {"true","false"}:raise HTTPException(422,"Value must be true or false.")
         return value.lower()
     try:number=int(value)

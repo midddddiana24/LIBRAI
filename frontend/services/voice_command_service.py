@@ -23,6 +23,12 @@ def resolve_voice_command(text: str) -> dict:
         return {"action": "navigate", "route": Routes.POPULAR_BOOKS, "message": "Opening popular books."}
     if any(phrase in command for phrase in ("new books", "new arrivals", "latest books")):
         return {"action": "navigate", "route": Routes.NEW_BOOKS, "message": "Opening new books."}
+    if any(phrase in command for phrase in ("show available books", "available books", "books on shelf", "what books can i borrow")):
+        return {"action": "search_available", "query": "", "message": "Showing available books."}
+    if any(phrase in command for phrase in ("clear search", "clear the search", "remove search")):
+        return {"action": "clear_search", "query": "", "message": "Clearing the catalog search."}
+    if any(phrase in command for phrase in ("go back", "back one page", "previous page")):
+        return {"action": "back", "message": "Going back."}
     match = re.search(r"(?:search|find|look for|show me|i want|i need)\s+(?:some\s+|books?\s+about\s+|books?\s+on\s+|books?\s+)?(.+)", command)
     if match and match.group(1).strip():
         return {"action": "search", "query": match.group(1).strip(), "message": f"Searching for {match.group(1).strip()}."}

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import flet as ft
+import flet_audio_recorder as far
 import uuid
 import asyncio
+from pathlib import Path
 
 from components.alert import Alert
 from components.book_grid import BookGrid
@@ -25,9 +27,9 @@ def build(page: ft.Page) -> ft.View:
     speech = ft.Text("Use the microphone to speak your search.", size=11, color=Colors.TEXT_SECONDARY)
     progress = ft.Row(visible=False, controls=[ft.ProgressRing(width=20, height=20, stroke_width=3), ft.Text("Searching the library catalog…", size=12, color=Colors.TEXT_SECONDARY)])
     ask_button = ft.FilledButton("Ask", icon=ft.Icons.SEND_ROUNDED)
-    recorder = ft.AudioRecorder(suppress_noise=True, cancel_echo=True, auto_gain=True, sample_rate=16000)
+    recorder = far.AudioRecorder(suppress_noise=True, cancel_echo=True, auto_gain=True, sample_rate=16000)
     page.overlay.append(recorder)
-    recording = {"active": False}
+    recording = {"active": False, "last_spoken": "", "pending_command": None}
     mic_button = ft.IconButton(ft.Icons.MIC_NONE_ROUNDED, tooltip="Speak your search")
     command_mode = page.client_storage.get("librai_voice_mode") or "dictate"
     page.client_storage.remove("librai_voice_mode")
@@ -84,7 +86,124 @@ def build(page: ft.Page) -> ft.View:
             speech.color = Colors.ERROR
         page.update()
 
-    mic_button.on_click = toggle_recording
+    confirmation = ft.Container(visible=False)
+    retry_button = ft.OutlinedButton("Repeat command", icon=ft.Icons.REPLAY_ROUNDED, visible=False)
+    cancel_button = ft.TextButton("Cancel", visible=False)
+
+    def cleanup_recording(path: str | None) -> None:
+        if not path or str(path).startswith(("blob:", "http://", "https://")):
+            return
+        candidate = Path(path).resolve()
+        root = settings.frontend_upload_directory.resolve()
+        if candidate.is_file() and root in candidate.parents:
+            candidate.unlink()
+
+    async def process_spoken(spoken: str) -> None:
+        recording["last_spoken"] = spoken
+        retry_button.visible = True
+        if mode.value != "command":
+            prompt.value = spoken
+            speech.value = "Speech converted to text. Review it, then press Ask."
+            speech.color = Colors.SUCCESS
+            return
+        command = resolve_voice_command(spoken)
+        if command["action"] in {"unknown", "ask"}:
+            prompt.value = command.get("query", spoken)
+            speech.value = "Command not recognized. I placed the speech in the text box."
+            speech.color = Colors.WARNING
+            return
+        recording["pending_command"] = command
+        confirmation.visible = True
+        confirmation.content = ft.Row(wrap=True, spacing=Spacing.SM, controls=[ft.Text(f"I understood: {command['message']}", weight=ft.FontWeight.W_600), ft.FilledButton("Continue", on_click=confirm_command), cancel_button])
+        cancel_button.visible = True
+        speech.value = "Ready for confirmation"
+        speech.color = Colors.WARNING
+
+    async def complete_recording() -> None:
+        if not recording["active"]:
+            return
+        recording["active"] = False
+        mic_button.icon = ft.Icons.MIC_NONE_ROUNDED
+        mic_button.tooltip = "Speak your search"
+        speech.value = "Processing speech..."
+        speech.color = Colors.PRIMARY
+        page.update()
+        path = await recorder.stop_recording()
+        if not path:
+            speech.value = "No recording was captured. You can type your request instead."
+            speech.color = Colors.ERROR
+            page.update()
+            return
+        result = await asyncio.to_thread(speech_service.transcribe, str(path))
+        cleanup_recording(str(path))
+        if result.ok:
+            await process_spoken(str((result.data or {}).get("text", "")).strip())
+        else:
+            speech.value = f"Speech failed: {result.message} You can type your request instead."
+            speech.color = Colors.ERROR
+        page.update()
+
+    async def auto_stop() -> None:
+        await asyncio.sleep(15)
+        if recording["active"]:
+            await complete_recording()
+
+    async def repeat_command(_event) -> None:
+        if recording["last_spoken"]:
+            await process_spoken(recording["last_spoken"])
+            page.update()
+
+    def cancel_command(_event) -> None:
+        recording["pending_command"] = None
+        confirmation.visible = False
+        cancel_button.visible = False
+        speech.value = "Command cancelled. Ready"
+        speech.color = Colors.TEXT_SECONDARY
+        page.update()
+
+    async def confirm_command(_event) -> None:
+        command = recording.pop("pending_command", None)
+        confirmation.visible = False
+        cancel_button.visible = False
+        if not command:
+            return
+        speech.value = "Command completed"
+        speech.color = Colors.SUCCESS
+        page.update()
+        if command["action"] == "navigate":
+            page.go(command["route"])
+        elif command["action"] in {"search", "search_available", "clear_search"}:
+            page.client_storage.set("librai_pending_search", command["query"])
+            page.client_storage.set("librai_pending_available_only", command["action"] == "search_available")
+            page.go(Routes.SEARCH)
+        elif command["action"] == "back":
+            page.go(Routes.HOME)
+
+    async def improved_toggle_recording(_event) -> None:
+        if recording["active"]:
+            await complete_recording()
+            return
+        settings.frontend_upload_directory.mkdir(parents=True, exist_ok=True)
+        output = settings.frontend_upload_directory / f"speech-{uuid.uuid4().hex}.wav"
+        try:
+            if await recorder.start_recording(str(output)):
+                recording["active"] = True
+                mic_button.icon = ft.Icons.STOP_CIRCLE_OUTLINED
+                mic_button.tooltip = "Stop recording"
+                speech.value = "Listening (up to 15 seconds)"
+                speech.color = Colors.PRIMARY
+                page.run_task(auto_stop)
+            else:
+                speech.value = "This device could not start microphone recording. You can type instead."
+                speech.color = Colors.ERROR
+        except Exception:
+            speech.value = "Microphone permission or recording is unavailable. You can type instead."
+            speech.color = Colors.ERROR
+        page.update()
+
+    mic_button.on_click = improved_toggle_recording
+    retry_button.on_click = repeat_command
+    cancel_button.on_click = cancel_command
 
     def add_exchange(query: str, data: dict) -> None:
         transcript.controls.append(ft.Container(alignment=ft.alignment.center_right, content=ft.Container(bgcolor=Colors.INFO_BG, border_radius=Radius.MD, padding=Spacing.MD, content=ft.Text(query))))
@@ -149,5 +268,5 @@ def build(page: ft.Page) -> ft.View:
             ft.Text("Borrow a book  •  Return a book  •  Search Python books  •  Show my account  •  Go home", size=11, color=Colors.TEXT_SECONDARY),
         ]),
     )
-    composer = ft.Container(bgcolor=Colors.SURFACE, border=ft.border.all(1, Colors.BORDER), border_radius=Radius.MD, padding=Spacing.MD, content=ft.Column(controls=[ft.Row(controls=[prompt, mode, mic_button, ask_button]), progress, speech, command_help]))
+    composer = ft.Container(bgcolor=Colors.SURFACE, border=ft.border.all(1, Colors.BORDER), border_radius=Radius.MD, padding=Spacing.MD, content=ft.Column(controls=[ft.Row(controls=[prompt, mode, mic_button, ask_button]), progress, speech, ft.Row(controls=[retry_button]), confirmation, command_help]))
     return KioskView(page, Routes.AI_ASSISTANT, "LIBRAI Assistant", [ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[ft.Column(tight=True, controls=[ft.Text("What would you like to read?", size=28, weight=ft.FontWeight.W_700), ft.Text("Recommendations are limited to books in the library catalog.", color=Colors.TEXT_SECONDARY)]), ft.TextButton("Clear conversation", icon=ft.Icons.DELETE_OUTLINE_ROUNDED, on_click=clear)]), examples, transcript, composer], state.kiosk_user.get("name") if state.kiosk_user else None)

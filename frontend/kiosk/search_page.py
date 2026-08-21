@@ -110,7 +110,10 @@ def build(page: ft.Page) -> ft.View:
         execute()
 
     pending = page.client_storage.get("librai_pending_search") or ""
+    pending_available = bool(page.client_storage.get("librai_pending_available_only"))
     page.client_storage.remove("librai_pending_search")
+    page.client_storage.remove("librai_pending_available_only")
+    available.value = pending_available
     render_recent()
     execute(str(pending), show_loading=False)
     filters = ft.Container(

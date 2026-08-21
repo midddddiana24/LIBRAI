@@ -89,7 +89,7 @@ def _hero(page: ft.Page) -> ft.Container:
                     width=500 if compact else 560,
                     content=SearchBar(
                         on_submit=search,
-                        on_mic_click=lambda _e: page.go(Routes.AI_ASSISTANT),
+                        on_mic_click=lambda _e: (page.client_storage.set("librai_voice_mode", "command"), page.go(Routes.AI_ASSISTANT)),
                         compact=True,
                     ),
                 ),
@@ -108,6 +108,7 @@ def _action_tile(
     description: str,
     route: str,
     accent: str,
+    before_navigate=None,
 ) -> ft.Container:
     def hover(event: ft.ControlEvent) -> None:
         tile = event.control
@@ -128,7 +129,7 @@ def _action_tile(
         animate=ft.Animation(160, ft.AnimationCurve.EASE_OUT),
         animate_scale=ft.Animation(160, ft.AnimationCurve.EASE_OUT),
         on_hover=hover,
-        on_click=lambda _e: page.go(route),
+        on_click=lambda _e: (before_navigate() if before_navigate else None, page.go(route)),
         content=ft.Column(
             spacing=Spacing.SM,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -198,6 +199,18 @@ def build(page: ft.Page) -> ft.View:
                     "Scan your library card QR, then the book copy QR.",
                     Routes.BORROW_SCAN_USER,
                     Colors.PRIMARY,
+                ),
+            ),
+            ft.Container(
+                col={"xs": 6, "md": 4},
+                content=_action_tile(
+                    page,
+                    ft.Icons.RECORD_VOICE_OVER_ROUNDED,
+                    "Voice Commands",
+                    "Say borrow, return, search, account, or home.",
+                    Routes.AI_ASSISTANT,
+                    "#7C3AED",
+                    before_navigate=lambda: page.client_storage.set("librai_voice_mode", "command"),
                 ),
             ),
             ft.Container(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import flet as ft
 import uuid
+import asyncio
 
 from components.alert import Alert
 from components.book_grid import BookGrid
@@ -28,11 +29,13 @@ def build(page: ft.Page) -> ft.View:
     page.overlay.append(recorder)
     recording = {"active": False}
     mic_button = ft.IconButton(ft.Icons.MIC_NONE_ROUNDED, tooltip="Speak your search")
-    mode = ft.Dropdown(width=155, label="Voice mode", value="dictate", options=[ft.dropdown.Option("dictate", "Dictate text"), ft.dropdown.Option("command", "Voice command")], border_radius=Radius.SM)
+    command_mode = page.client_storage.get("librai_voice_mode") or "dictate"
+    page.client_storage.remove("librai_voice_mode")
+    mode = ft.Dropdown(width=155, label="Voice mode", value=command_mode, options=[ft.dropdown.Option("dictate", "Dictate text"), ft.dropdown.Option("command", "Voice command")], border_radius=Radius.SM)
 
-    def toggle_recording(_event) -> None:
+    async def toggle_recording(_event) -> None:
         if recording["active"]:
-            path = recorder.stop_recording()
+            path = await asyncio.to_thread(recorder.stop_recording)
             recording["active"] = False
             mic_button.icon = ft.Icons.MIC_NONE_ROUNDED
             mic_button.tooltip = "Speak your search"
@@ -49,7 +52,10 @@ def build(page: ft.Page) -> ft.View:
                         speech.color = Colors.SUCCESS if command["action"] != "unknown" else Colors.ERROR
                         if command["action"] == "navigate":
                             page.go(command["route"])
-                        elif command["action"] in {"search", "ask"}:
+                        elif command["action"] == "search":
+                            page.client_storage.set("librai_pending_search", command["query"])
+                            page.go(Routes.SEARCH)
+                        elif command["action"] == "ask":
                             prompt.value = command["query"]
                             ask()
                     else:
@@ -64,7 +70,7 @@ def build(page: ft.Page) -> ft.View:
         settings.frontend_upload_directory.mkdir(parents=True, exist_ok=True)
         output = settings.frontend_upload_directory / f"speech-{uuid.uuid4().hex}.wav"
         try:
-            if recorder.start_recording(str(output)):
+            if await asyncio.to_thread(recorder.start_recording, str(output)):
                 recording["active"] = True
                 mic_button.icon = ft.Icons.STOP_CIRCLE_OUTLINED
                 mic_button.tooltip = "Stop recording"
@@ -102,7 +108,7 @@ def build(page: ft.Page) -> ft.View:
     for message in state.ai_messages:
         add_exchange(str(message.get("query", "")), message.get("response", {}))
 
-    def ask(_event=None) -> None:
+    async def ask(_event=None) -> None:
         state.touch()
         query = str(prompt.value or "").strip()
         if not query or ask_button.disabled:
@@ -110,7 +116,12 @@ def build(page: ft.Page) -> ft.View:
         ask_button.disabled = True
         progress.visible = True
         page.update()
-        result = ai_service.search(query, state.kiosk_user.get("id") if state.kiosk_user else None, state.kiosk_user.get("verification_token") if state.kiosk_user else None)
+        result = await asyncio.to_thread(
+            ai_service.search,
+            query,
+            state.kiosk_user.get("id") if state.kiosk_user else None,
+            state.kiosk_user.get("verification_token") if state.kiosk_user else None,
+        )
         progress.visible = False
         ask_button.disabled = False
         if result.ok:
@@ -129,5 +140,14 @@ def build(page: ft.Page) -> ft.View:
 
     ask_button.on_click = ask
     examples = ft.Row(wrap=True, controls=[ft.OutlinedButton(text, on_click=lambda _e, value=text: (setattr(prompt, "value", value), page.update())) for text in ["Beginner cybersecurity books", "Python programming books", "Networking fundamentals"]])
-    composer = ft.Container(bgcolor=Colors.SURFACE, border=ft.border.all(1, Colors.BORDER), border_radius=Radius.MD, padding=Spacing.MD, content=ft.Column(controls=[ft.Row(controls=[prompt, mode, mic_button, ask_button]), progress, speech]))
+    command_help = ft.Container(
+        bgcolor=Colors.INFO_BG,
+        border_radius=Radius.SM,
+        padding=Spacing.MD,
+        content=ft.Column(tight=True, spacing=4, controls=[
+            ft.Text("Voice command examples", size=12, weight=ft.FontWeight.W_700, color=Colors.PRIMARY),
+            ft.Text("Borrow a book  •  Return a book  •  Search Python books  •  Show my account  •  Go home", size=11, color=Colors.TEXT_SECONDARY),
+        ]),
+    )
+    composer = ft.Container(bgcolor=Colors.SURFACE, border=ft.border.all(1, Colors.BORDER), border_radius=Radius.MD, padding=Spacing.MD, content=ft.Column(controls=[ft.Row(controls=[prompt, mode, mic_button, ask_button]), progress, speech, command_help]))
     return KioskView(page, Routes.AI_ASSISTANT, "LIBRAI Assistant", [ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[ft.Column(tight=True, controls=[ft.Text("What would you like to read?", size=28, weight=ft.FontWeight.W_700), ft.Text("Recommendations are limited to books in the library catalog.", color=Colors.TEXT_SECONDARY)]), ft.TextButton("Clear conversation", icon=ft.Icons.DELETE_OUTLINE_ROUNDED, on_click=clear)]), examples, transcript, composer], state.kiosk_user.get("name") if state.kiosk_user else None)

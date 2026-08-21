@@ -84,7 +84,8 @@ When `LIBRAI_USE_MOCK_FALLBACK=true`, network/server failures fall back to small
 ## Integration notes
 
 - Laptop camera QR scanning uses OpenCV inside the local Python frontend. In Borrow Book, Return Book, or My Account, select **Start laptop camera**, hold the QR inside the frame, and wait for automatic verification. This accesses the camera attached to the computer running Flet; a remotely hosted Python process cannot access the browser user's camera. Change `LIBRAI_CAMERA_INDEX` to `1` or higher for an external camera. Manual entry remains available for development and camera failures.
-- Voice UI exposes the unavailable state until a speech capture/transcription adapter is connected.
+- Voice commands are available from the home screen's **Voice Commands** tile and the AI Assistant's **Voice mode** selector. Use phrases such as "borrow a book", "return a book", "search Python books", "show my account", or "go home".
+- Tablet microphone access requires browser permission and may require HTTPS when opening LIBRAI from a LAN address. For local testing, allow microphone access for the Flet page and keep the tablet and computer on the same network.
 - Dashboard metrics and seven-day activity use live backend data and explicit empty states.
 - Report and QR-sheet downloads use short-lived signed backend URLs.
 - Kiosk catalog search keeps up to five recent queries in browser-local storage.

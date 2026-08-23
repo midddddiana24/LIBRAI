@@ -116,7 +116,7 @@ def build(page: ft.Page) -> ft.View:
 
     async def process_spoken(spoken: str) -> None:
         recording["last_spoken"] = spoken
-        retry_button.visible = True
+        retry_button.visible = False
         if mode.value != "command":
             prompt.value = spoken
             speech.value = "Speech converted to text. Review it, then press Ask."
@@ -128,12 +128,20 @@ def build(page: ft.Page) -> ft.View:
             speech.value = "Command not recognized. I placed the speech in the text box."
             speech.color = Colors.WARNING
             return
-        recording["pending_command"] = command
-        confirmation.visible = True
-        confirmation.content = ft.Row(wrap=True, spacing=Spacing.SM, controls=[ft.Text(f"I understood: {command['message']}", weight=ft.FontWeight.W_600), ft.FilledButton("Continue", on_click=confirm_command), cancel_button])
-        cancel_button.visible = True
-        speech.value = "Ready for confirmation"
-        speech.color = Colors.WARNING
+        # Kiosk command mode is intentionally hands-free: recognized commands
+        # execute the requested navigation/workflow immediately. Confirmation
+        # controls remain available only in the internal state for compatibility
+        # with older sessions, but are not rendered in the kiosk composer.
+        speech.value = command["message"]
+        speech.color = Colors.SUCCESS
+        if command["action"] == "navigate":
+            page.go(command["route"])
+        elif command["action"] in {"search", "search_available", "clear_search"}:
+            page.client_storage.set("librai_pending_search", command["query"])
+            page.client_storage.set("librai_pending_available_only", command["action"] == "search_available")
+            page.go(Routes.SEARCH)
+        elif command["action"] == "back":
+            page.go(Routes.HOME)
 
     async def complete_recording() -> None:
         if not recording["active"]:
@@ -162,7 +170,7 @@ def build(page: ft.Page) -> ft.View:
         page.update()
 
     async def auto_stop() -> None:
-        await asyncio.sleep(15)
+        await asyncio.sleep(6 if mode.value == "command" else 15)
         if recording["active"]:
             await complete_recording()
 
@@ -222,6 +230,12 @@ def build(page: ft.Page) -> ft.View:
     mic_button.on_click = improved_toggle_recording
     retry_button.on_click = repeat_command
     cancel_button.on_click = cancel_command
+
+    async def auto_start_command_mode() -> None:
+        """Start hands-free command listening after the command page opens."""
+        await asyncio.sleep(0.4)
+        if mode.value == "command" and not recording["active"]:
+            await improved_toggle_recording(None)
 
     def add_exchange(query: str, data: dict) -> None:
         transcript.controls.append(ft.Container(alignment=ft.alignment.center_right, content=ft.Container(bgcolor=Colors.INFO_BG, border_radius=Radius.MD, padding=Spacing.MD, content=ft.Text(query))))
@@ -286,5 +300,12 @@ def build(page: ft.Page) -> ft.View:
             ft.Text("Borrow a book  •  Return a book  •  Search Python books  •  Show my account  •  Go home", size=11, color=Colors.TEXT_SECONDARY),
         ]),
     )
+    if command_mode == "command":
+        mic_button.visible = False
+        mode.visible = False
+        retry_button.visible = False
+        cancel_button.visible = False
+        confirmation.visible = False
+        page.run_task(auto_start_command_mode)
     composer = ft.Container(bgcolor=Colors.SURFACE, border=ft.border.all(1, Colors.BORDER), border_radius=Radius.MD, padding=Spacing.MD, content=ft.Column(controls=[ft.Row(controls=[prompt, mode, mic_button, ask_button]), progress, speech, ft.Row(controls=[retry_button]), confirmation, command_help]))
     return KioskView(page, Routes.AI_ASSISTANT, "LIBRAI Assistant", [ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[ft.Column(tight=True, controls=[ft.Text("What would you like to read?", size=28, weight=ft.FontWeight.W_700), ft.Text("Recommendations are limited to books in the library catalog.", color=Colors.TEXT_SECONDARY)]), ft.TextButton("Clear conversation", icon=ft.Icons.DELETE_OUTLINE_ROUNDED, on_click=clear)]), examples, transcript, composer], state.kiosk_user.get("name") if state.kiosk_user else None)

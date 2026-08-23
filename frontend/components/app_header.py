@@ -102,10 +102,21 @@ def AppHeader(
 
     voice_button: ft.FilledButton
 
+    def voice_is_enabled() -> bool:
+        try:
+            return page.client_storage.get("librai_voice_enabled") == "true"
+        except (TimeoutError, RuntimeError):
+            return False
+
     def set_voice_label(label: str, active: bool = False) -> None:
         voice_button.text = label
         voice_button.icon = ft.Icons.MIC_ROUNDED if active else ft.Icons.MIC_OFF_ROUNDED
-        voice_button.update()
+        try:
+            voice_button.update()
+        except AssertionError:
+            # The first auto-listen task can run before the new header has
+            # been attached to the page during a route rebuild.
+            pass
 
     def cleanup_voice_file(path: str | None) -> None:
         if not path:
@@ -120,7 +131,7 @@ def AppHeader(
 
     async def listen_again() -> None:
         await asyncio.sleep(0.6)
-        if page.client_storage.get("librai_voice_enabled") == "true" and not controller["active"]:
+        if voice_is_enabled() and not controller["active"]:
             await start_voice()
 
     async def finish_voice() -> None:
@@ -147,11 +158,14 @@ def AppHeader(
             elif command["action"] == "back":
                 page.go(Routes.HOME)
         set_voice_label("Voice ON")
-        if page.client_storage.get("librai_voice_enabled") == "true":
+        if voice_is_enabled():
             page.run_task(listen_again)
 
     async def stop_voice() -> None:
-        page.client_storage.set("librai_voice_enabled", "false")
+        try:
+            page.client_storage.set("librai_voice_enabled", "false")
+        except (TimeoutError, RuntimeError):
+            pass
         if controller["active"]:
             controller["active"] = False
             path = await asyncio.to_thread(controller["recorder"].stop_recording)
@@ -178,12 +192,18 @@ def AppHeader(
             await finish_voice()
 
     def toggle_voice(_event) -> None:
-        enabled = page.client_storage.get("librai_voice_enabled") == "true"
+        enabled = voice_is_enabled()
         if enabled:
-            page.client_storage.remove("librai_voice_mode")
+            try:
+                page.client_storage.remove("librai_voice_mode")
+            except (TimeoutError, RuntimeError):
+                pass
             page.run_task(stop_voice)
             return
-        page.client_storage.set("librai_voice_enabled", "true")
+        try:
+            page.client_storage.set("librai_voice_enabled", "true")
+        except (TimeoutError, RuntimeError):
+            return
         page.run_task(start_voice)
 
     voice_button = ft.FilledButton(

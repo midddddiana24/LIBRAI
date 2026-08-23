@@ -205,18 +205,6 @@ def build(page: ft.Page) -> ft.View:
                 col={"xs": 6, "md": 4},
                 content=_action_tile(
                     page,
-                    ft.Icons.RECORD_VOICE_OVER_ROUNDED,
-                    "Voice Commands",
-                    "Say borrow, return, search, account, or home.",
-                    Routes.AI_ASSISTANT,
-                    "#7C3AED",
-                    before_navigate=lambda: page.client_storage.set("librai_voice_mode", "command"),
-                ),
-            ),
-            ft.Container(
-                col={"xs": 6, "md": 4},
-                content=_action_tile(
-                    page,
                     ft.Icons.ASSIGNMENT_RETURN_ROUNDED,
                     "Return a Book",
                     "Scan the QR attached to the physical book copy.",

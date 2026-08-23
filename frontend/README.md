@@ -88,6 +88,8 @@ When `LIBRAI_USE_MOCK_FALLBACK=true`, network/server failures fall back to small
 - Tablet microphone access requires browser permission and HTTPS when opening LIBRAI from a LAN address. Set `LIBRAI_API_BASE_URL` to the backend's LAN/HTTPS URL for the tablet build; `127.0.0.1` points back to the tablet itself and will not reach the computer.
 - For tablet HTTPS testing, run the Flet web app on the computer and place an HTTPS reverse proxy in front of it. With Caddy installed, use `caddy reverse-proxy --from https://YOUR-LAN-IP:8443 --to 127.0.0.1:8550 --internal-certs`, then open `https://YOUR-LAN-IP:8443` on the tablet and trust the local certificate when prompted.
 - Voice recordings are limited to 15 seconds, temporary local files are removed after upload, and transcription failures leave the typed request box available as a fallback.
+- Abandoned speech files older than one hour are removed when the assistant page opens, preventing interrupted tablet sessions from accumulating temporary audio.
+- Before production, set `LIBRAI_ENV=production`, a unique `SECRET_KEY`, explicit `CORS_ORIGINS`, database backups, SMTP settings, and an HTTPS certificate. Do not enable mock fallback in production.
 - Dashboard metrics and seven-day activity use live backend data and explicit empty states.
 - Report and QR-sheet downloads use short-lived signed backend URLs.
 - Kiosk catalog search keeps up to five recent queries in browser-local storage.

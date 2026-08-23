@@ -6,6 +6,7 @@ import flet as ft
 import flet_audio_recorder as far
 import uuid
 import asyncio
+import time
 from pathlib import Path
 
 from components.alert import Alert
@@ -20,8 +21,23 @@ from services.voice_command_service import resolve_voice_command
 from core.config import settings
 
 
+def cleanup_stale_recordings(max_age_seconds: int = 3600) -> None:
+    """Remove abandoned voice recordings from interrupted sessions."""
+    root = settings.frontend_upload_directory.resolve()
+    if not root.exists():
+        return
+    cutoff = time.time() - max_age_seconds
+    for candidate in root.glob("speech-*"):
+        try:
+            if candidate.is_file() and candidate.stat().st_mtime < cutoff:
+                candidate.unlink()
+        except OSError:
+            continue
+
+
 def build(page: ft.Page) -> ft.View:
     state = get_state(page)
+    cleanup_stale_recordings()
     transcript = ft.Column(spacing=Spacing.MD)
     prompt = ft.TextField(expand=True, hint_text="Ask what kind of book you are looking for…", multiline=True, min_lines=1, max_lines=3, border_radius=Radius.MD)
     speech = ft.Text("Use the microphone to speak your search.", size=11, color=Colors.TEXT_SECONDARY)
@@ -82,7 +98,7 @@ def build(page: ft.Page) -> ft.View:
                 speech.value = "This device could not start microphone recording."
                 speech.color = Colors.ERROR
         except Exception:
-            speech.value = "Microphone permission or recording is unavailable on this device."
+            speech.value = "Microphone permission denied or unavailable. Allow microphone access in browser settings, then try again—or type instead."
             speech.color = Colors.ERROR
         page.update()
 
@@ -199,7 +215,7 @@ def build(page: ft.Page) -> ft.View:
                 speech.value = "This device could not start microphone recording. You can type instead."
                 speech.color = Colors.ERROR
         except Exception:
-            speech.value = "Microphone permission or recording is unavailable. You can type instead."
+            speech.value = "Microphone permission denied or unavailable. Allow microphone access in browser settings, then try again—or type instead."
             speech.color = Colors.ERROR
         page.update()
 

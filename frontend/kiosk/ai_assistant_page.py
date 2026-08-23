@@ -128,7 +128,9 @@ def build(page: ft.Page) -> ft.View:
         speech.value = "Processing speech..."
         speech.color = Colors.PRIMARY
         page.update()
-        path = await recorder.stop_recording()
+        # flet-audio-recorder 0.1.x exposes synchronous control methods.
+        # Keep the blocking device call off Flet's UI loop.
+        path = await asyncio.to_thread(recorder.stop_recording)
         if not path:
             speech.value = "No recording was captured. You can type your request instead."
             speech.color = Colors.ERROR
@@ -186,7 +188,7 @@ def build(page: ft.Page) -> ft.View:
         settings.frontend_upload_directory.mkdir(parents=True, exist_ok=True)
         output = settings.frontend_upload_directory / f"speech-{uuid.uuid4().hex}.wav"
         try:
-            if await recorder.start_recording(str(output)):
+            if await asyncio.to_thread(recorder.start_recording, str(output)):
                 recording["active"] = True
                 mic_button.icon = ft.Icons.STOP_CIRCLE_OUTLINED
                 mic_button.tooltip = "Stop recording"

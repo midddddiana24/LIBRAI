@@ -82,6 +82,9 @@ class GeminiClient:
             parts = response.json()["candidates"][0]["content"]["parts"]
             text = " ".join(str(part.get("text", "")) for part in parts).strip()
             return text or None
+        except httpx.HTTPStatusError as exc:
+            logger.warning("Gemini speech transcription unavailable: HTTP %s body=%s", exc.response.status_code, exc.response.text[:300])
+            return None
         except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
             logger.warning("Gemini speech transcription unavailable: %s", type(exc).__name__)
             return None

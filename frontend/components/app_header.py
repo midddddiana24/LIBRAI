@@ -20,6 +20,7 @@ from core.theme    import Colors, Radius, Spacing
 from services.api_client import api_client
 from services.speech_service import speech_service
 from services.voice_command_service import resolve_voice_command
+from services.tts_service import tts_service
 
 
 def AppHeader(
@@ -97,7 +98,9 @@ def AppHeader(
     if controller is None:
         recorder = far.AudioRecorder(suppress_noise=True, cancel_echo=True, auto_gain=True, sample_rate=16000)
         page.overlay.append(recorder)
-        controller = {"recorder": recorder, "active": False, "path": None, "button": None}
+        reply_audio = ft.Audio(autoplay=False)
+        page.overlay.append(reply_audio)
+        controller = {"recorder": recorder, "reply_audio": reply_audio, "active": False, "path": None, "button": None}
         setattr(page, "_librai_voice_controller", controller)
 
     voice_button: ft.FilledButton
@@ -149,6 +152,17 @@ def AppHeader(
         if result.ok:
             spoken = str((result.data or {}).get("text", "")).strip()
             command = resolve_voice_command(spoken)
+            reply = command.get("spoken_reply") or command.get("message")
+            try:
+                audio = await asyncio.to_thread(tts_service.synthesize_base64, reply)
+                if audio:
+                    controller["reply_audio"].src_base64 = audio
+                    controller["reply_audio"].autoplay = True
+                    controller["reply_audio"].play()
+            except Exception:
+                # Navigation must remain functional if the optional TTS service
+                # is offline or its provider is unavailable.
+                pass
             if command["action"] == "navigate":
                 page.go(command["route"])
             elif command["action"] in {"search", "search_available", "clear_search"}:

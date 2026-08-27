@@ -3,3 +3,4 @@ flet-audio-recorder==0.1.0
 requests>=2.32,<3.0
 python-dotenv>=1.0,<2.0
 opencv-python-headless>=4.10,<5.0
+gTTS==2.5.4

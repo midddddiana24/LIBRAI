@@ -8,11 +8,11 @@ def resolve_voice_command(text: str) -> dict:
     if not command:
         return {"action": "unknown", "message": "No voice command was detected."}
     if any(phrase in command for phrase in ("go home", "home page", "return home", "back home", "main menu", "start page")):
-        return {"action": "navigate", "route": Routes.HOME, "message": "Opening the kiosk home page."}
+        return {"action": "navigate", "route": Routes.HOME, "message": "Opening the kiosk home page.", "spoken_reply": "Okay, I got it. Opening the kiosk home page."}
     if any(phrase in command for phrase in ("borrow a book", "borrow book", "start borrowing", "i want to borrow", "i need to borrow", "can i borrow", "please borrow", "get a book")):
-        return {"action": "navigate", "route": Routes.BORROW_SCAN_USER, "message": "Opening book borrowing."}
+        return {"action": "navigate", "route": Routes.BORROW_SCAN_USER, "message": "Opening book borrowing.", "spoken_reply": "Okay, I got it. Let’s borrow a book."}
     if any(phrase in command for phrase in ("return a book", "return book", "start return", "i want to return", "give back a book")):
-        return {"action": "navigate", "route": Routes.RETURN_SCAN_BOOK, "message": "Opening book returns."}
+        return {"action": "navigate", "route": Routes.RETURN_SCAN_BOOK, "message": "Opening book returns.", "spoken_reply": "Okay, I got it. Let’s return a book."}
     if any(phrase in command for phrase in ("my account", "open account", "show account", "my loans", "my books")):
         return {"action": "navigate", "route": Routes.ACCOUNT, "message": "Opening your library account."}
     if any(phrase in command for phrase in ("reservations", "my reservations", "show reservations", "reservation queue")):

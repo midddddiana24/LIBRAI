@@ -74,6 +74,8 @@ def main(page: ft.Page) -> None:
                 page.open(warning)
             if private_session and elapsed >= Session.INACTIVITY_TIMEOUT_SECONDS:
                 state.clear_kiosk()
+                page.client_storage.set("librai_voice_enabled", "false")
+                page.client_storage.remove("librai_voice_mode")
                 page.go(Routes.HOME)
 
     page.on_route_change = route_change

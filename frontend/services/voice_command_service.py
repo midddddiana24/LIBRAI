@@ -11,7 +11,7 @@ def resolve_voice_command(text: str) -> dict:
         return {"action": "navigate", "route": Routes.HOME, "message": "Opening the kiosk home page.", "spoken_reply": "Okay, I got it. Opening the kiosk home page."}
     if any(phrase in command for phrase in ("borrow a book", "borrow book", "start borrowing", "i want to borrow", "i need to borrow", "can i borrow", "please borrow", "get a book")):
         return {"action": "navigate", "route": Routes.BORROW_SCAN_USER, "message": "Opening book borrowing.", "spoken_reply": "Okay, I got it. Let’s borrow a book."}
-    if any(phrase in command for phrase in ("return a book", "return book", "start return", "i want to return", "give back a book")):
+    if any(phrase in command for phrase in ("return a book", "return book", "start return", "i want to return", "can i return", "give back a book")):
         return {"action": "navigate", "route": Routes.RETURN_SCAN_BOOK, "message": "Opening book returns.", "spoken_reply": "Okay, I got it. Let’s return a book."}
     if any(phrase in command for phrase in ("my account", "open account", "show account", "my loans", "my books")):
         return {"action": "navigate", "route": Routes.ACCOUNT, "message": "Opening your library account."}
@@ -25,6 +25,9 @@ def resolve_voice_command(text: str) -> dict:
         return {"action": "navigate", "route": Routes.NEW_BOOKS, "message": "Opening new books."}
     if any(phrase in command for phrase in ("show available books", "show me books i can borrow", "available books", "books on shelf", "what books can i borrow")):
         return {"action": "search_available", "query": "", "message": "Showing available books."}
+    if any(phrase in command for phrase in ("find available", "search available", "available books about", "available books on")):
+        query = re.sub(r"^(find|search) available (books? )?(about |on )?", "", command).strip()
+        return {"action": "search_available", "query": query, "message": f"Showing available books for {query}." if query else "Showing available books."}
     if any(phrase in command for phrase in ("clear search", "clear the search", "remove search", "remove the search", "clear the filter", "remove the filter")):
         return {"action": "clear_search", "query": "", "message": "Clearing the catalog search."}
     if any(phrase in command for phrase in ("go back", "take me back", "back one page", "previous page", "previous screen")):

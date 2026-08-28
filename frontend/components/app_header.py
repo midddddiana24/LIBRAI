@@ -100,10 +100,12 @@ def AppHeader(
         page.overlay.append(recorder)
         reply_audio = ft.Audio(autoplay=False)
         page.overlay.append(reply_audio)
-        controller = {"recorder": recorder, "reply_audio": reply_audio, "active": False, "path": None, "button": None}
+        controller = {"recorder": recorder, "reply_audio": reply_audio, "active": False, "path": None, "button": None, "status": None, "status_value": "Ready"}
         setattr(page, "_librai_voice_controller", controller)
 
     voice_button: ft.FilledButton
+    voice_status = ft.Text(controller.get("status_value", "Ready"), size=10, color=Colors.TEXT_SECONDARY, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS)
+    controller["status"] = voice_status
 
     def voice_is_enabled() -> bool:
         try:
@@ -119,6 +121,15 @@ def AppHeader(
         except AssertionError:
             # The first auto-listen task can run before the new header has
             # been attached to the page during a route rebuild.
+            pass
+
+    def set_voice_status(value: str, color: str = Colors.TEXT_SECONDARY) -> None:
+        controller["status_value"] = value
+        voice_status.value = value
+        voice_status.color = color
+        try:
+            voice_status.update()
+        except AssertionError:
             pass
 
     def cleanup_voice_file(path: str | None) -> None:
@@ -137,15 +148,34 @@ def AppHeader(
         if voice_is_enabled() and not controller["active"]:
             await start_voice()
 
+    async def speak_reply(reply: str) -> None:
+        """Speak without delaying the kiosk navigation."""
+        set_voice_status("Speaking", Colors.PRIMARY)
+        try:
+            audio = await asyncio.wait_for(
+                asyncio.to_thread(tts_service.synthesize_base64, reply),
+                timeout=3,
+            )
+            if audio:
+                controller["reply_audio"].src_base64 = audio
+                controller["reply_audio"].autoplay = True
+                controller["reply_audio"].play()
+                await asyncio.sleep(0.5)
+            set_voice_status("Command completed", Colors.SUCCESS)
+        except Exception:
+            set_voice_status("Command completed (text only)", Colors.SUCCESS)
+
     async def finish_voice() -> None:
         if not controller["active"]:
             return
         controller["active"] = False
         set_voice_label("Processing…", active=True)
+        set_voice_status("Processing", Colors.PRIMARY)
         path = await asyncio.to_thread(controller["recorder"].stop_recording)
         controller["path"] = path
         if not path:
             set_voice_label("Voice ON")
+            set_voice_status("No speech captured", Colors.ERROR)
             return
         result = await asyncio.to_thread(speech_service.transcribe, str(path))
         cleanup_voice_file(str(path))
@@ -153,16 +183,9 @@ def AppHeader(
             spoken = str((result.data or {}).get("text", "")).strip()
             command = resolve_voice_command(spoken)
             reply = command.get("spoken_reply") or command.get("message")
-            try:
-                audio = await asyncio.to_thread(tts_service.synthesize_base64, reply)
-                if audio:
-                    controller["reply_audio"].src_base64 = audio
-                    controller["reply_audio"].autoplay = True
-                    controller["reply_audio"].play()
-            except Exception:
-                # Navigation must remain functional if the optional TTS service
-                # is offline or its provider is unavailable.
-                pass
+            heard = spoken[:80] if spoken else "No words recognized"
+            set_voice_status(f"Heard: {heard}", Colors.SUCCESS if spoken else Colors.ERROR)
+            page.run_task(speak_reply, reply)
             if command["action"] == "navigate":
                 page.go(command["route"])
             elif command["action"] in {"search", "search_available", "clear_search"}:
@@ -171,6 +194,8 @@ def AppHeader(
                 page.go(Routes.SEARCH)
             elif command["action"] == "back":
                 page.go(Routes.HOME)
+        else:
+            set_voice_status(f"Speech error: {result.message[:60]}", Colors.ERROR)
         set_voice_label("Voice ON")
         if voice_is_enabled():
             page.run_task(listen_again)
@@ -196,10 +221,12 @@ def AppHeader(
         except Exception:
             started = False
         if not started:
+            set_voice_status("Microphone unavailable", Colors.ERROR)
             set_voice_label("Voice OFF")
             return
         controller["active"] = True
         controller["path"] = output
+        set_voice_status("Listening", Colors.PRIMARY)
         set_voice_label("Listening…", active=True)
         await asyncio.sleep(6)
         if controller["active"]:
@@ -233,7 +260,7 @@ def AppHeader(
             tooltip="Turn hands-free kiosk voice navigation on or off",
         )
     controller["button"] = voice_button
-    right.append(voice_button)
+    right.extend([voice_status, voice_button])
     if voice_enabled and not controller["active"]:
         page.run_task(start_voice)
 

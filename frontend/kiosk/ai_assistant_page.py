@@ -57,7 +57,7 @@ def build(page: ft.Page) -> ft.View:
             recording["active"] = False
             mic_button.icon = ft.Icons.MIC_NONE_ROUNDED
             mic_button.tooltip = "Speak your search"
-            if not path:
+            if not path or str(path).startswith(("blob:", "http://", "https://")):
                 speech.value = "No recording was captured. Please try again."
                 speech.color = Colors.ERROR
             else:

@@ -173,9 +173,11 @@ def AppHeader(
         set_voice_status("Processing", Colors.PRIMARY)
         path = await asyncio.to_thread(controller["recorder"].stop_recording)
         controller["path"] = path
-        if not path:
+        if not path or str(path).startswith(("blob:", "http://", "https://")):
             set_voice_label("Voice ON")
-            set_voice_status("No speech captured", Colors.ERROR)
+            set_voice_status("Browser audio unavailable; use native kiosk mode", Colors.ERROR)
+            if voice_is_enabled():
+                page.run_task(listen_again)
             return
         result = await asyncio.to_thread(speech_service.transcribe, str(path))
         cleanup_voice_file(str(path))

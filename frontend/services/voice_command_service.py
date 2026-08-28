@@ -29,7 +29,7 @@ def resolve_voice_command(text: str) -> dict:
         return {"action": "navigate", "route": Routes.POPULAR_BOOKS, "message": "Opening popular books."}
     if any(phrase in command for phrase in ("new books", "new arrivals", "latest books", "open new books", "newly added books", "recent books")):
         return {"action": "navigate", "route": Routes.NEW_BOOKS, "message": "Opening new books."}
-    if any(phrase in command for phrase in ("show available books", "show me books i can borrow", "available books", "books on shelf", "what books can i borrow", "books available", "what can i borrow", "show books i can get")):
+    if any(phrase in command for phrase in ("show available books", "show me books i can borrow", "available books", "books on shelf", "what books can i borrow", "books available", "what can i borrow", "show books i can get", "what books can i get")):
         return {"action": "search_available", "query": "", "message": "Showing available books."}
     if any(phrase in command for phrase in ("find available", "search available", "available books about", "available books on")):
         query = re.sub(r"^(find|search) available (books? )?(about |on )?", "", command).strip()

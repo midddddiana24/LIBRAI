@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-flash-lite-latest"
+    tokenrouter_api_key: str | None = None
+    tokenrouter_model: str = "qwen/qwen3.8-max-free"
+    tokenrouter_base_url: str = "https://api.tokenrouter.com/v1"
     gemini_timeout_seconds: float = 12.0
     gemini_retry_count: int = 1
     gemini_cache_seconds: int = 300
@@ -51,8 +54,8 @@ class Settings(BaseSettings):
         if self.environment.lower() == "production" and (self.secret_key == "development-only-change-this-secret-key" or len(self.secret_key) < 32):
             raise ValueError("Production SECRET_KEY must be a unique value of at least 32 characters.")
         if self.environment.lower() == "production":
-            if not self.gemini_api_key:
-                raise ValueError("Production GEMINI_API_KEY must be configured.")
+            if not self.gemini_api_key and not self.tokenrouter_api_key:
+                raise ValueError("Production GEMINI_API_KEY or TOKENROUTER_API_KEY must be configured.")
             if any(origin == "*" for origin in self.cors_origins):
                 raise ValueError("Production CORS_ORIGINS cannot contain '*'.")
             if any(value in {"replace-with-at-least-32-random-characters", "development-only-change-this-secret-key"} for value in (self.secret_key,)):

@@ -47,6 +47,16 @@ Policy values are stored in `system_settings`: `BORROWING_LIMIT`, `BORROWING_PER
 
 Set `GEMINI_API_KEY` to enable grounded Gemini reranking. Candidate books always come from the database and returned IDs are validated. Without a key, during rate limits, or on malformed responses, the deterministic catalog recommender remains operational and reports `fallback_used: true`.
 
+To use Qwen through TokenRouter as the catalog-ranking provider, set
+`TOKENROUTER_API_KEY`. It takes priority over Gemini for catalog ranking while
+speech-to-text continues to use `GEMINI_API_KEY` and all library operations
+remain backend-controlled. Never place either key in source code.
+
+```text
+TOKENROUTER_API_KEY=your-tokenrouter-key
+TOKENROUTER_MODEL=qwen/qwen3.8-max-free
+```
+
 ## Tests
 
 ```powershell

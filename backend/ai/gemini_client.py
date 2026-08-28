@@ -1,6 +1,7 @@
 from __future__ import annotations
 import base64, json, logging, re, time
 import httpx
+from openai import OpenAI
 from pydantic import BaseModel, Field, ValidationError
 from backend.core.config import settings
 
@@ -30,7 +31,10 @@ class GeminiClient:
         return GeminiRanking.model_validate_json(cleaned)
 
     def rank(self, query: str, candidates: list[dict]) -> GeminiRanking | None:
-        if not settings.gemini_api_key or not candidates: return None
+        if not candidates: return None
+        if settings.tokenrouter_api_key:
+            return self._rank_qwen(query, candidates)
+        if not settings.gemini_api_key: return None
         safe = [{"book_id": b["id"], "title": b["title"], "author": b["author"], "category": b.get("category"), "description": b.get("description"), "keywords": b.get("keywords", []), "available_copies": b.get("available_copies"), "shelf_location": b.get("shelf_location")} for b in candidates]
         cache_key = json.dumps({"query": query.strip().lower(), "catalog": safe}, sort_keys=True, default=str)
         cached = self._cache.get(cache_key)
@@ -64,6 +68,27 @@ class GeminiClient:
                 logger.warning("Gemini ranking unavailable: %s", type(exc).__name__)
                 return None
         return None
+
+    def _rank_qwen(self, query: str, candidates: list[dict]) -> GeminiRanking | None:
+        """Rank catalog candidates with Qwen through TokenRouter."""
+        safe = [{"book_id": b["id"], "title": b["title"], "author": b["author"], "category": b.get("category"), "description": b.get("description"), "keywords": b.get("keywords", []), "available_copies": b.get("available_copies"), "shelf_location": b.get("shelf_location")} for b in candidates]
+        prompt = "Only recommend books from the supplied library catalog. Never invent titles or IDs. Return strict JSON with message and recommendations [{book_id, reason}]. User query: " + query + "\nCatalog: " + json.dumps(safe)
+        try:
+            client = OpenAI(base_url=settings.tokenrouter_base_url, api_key=settings.tokenrouter_api_key, timeout=settings.gemini_timeout_seconds)
+            response = client.chat.completions.create(
+                model=settings.tokenrouter_model,
+                messages=[{"role": "system", "content": "You are LIBRAI's catalog recommendation assistant."}, {"role": "user", "content": prompt}],
+                response_format={"type": "json_object"},
+                temperature=0.2,
+            )
+            content = response.choices[0].message.content or ""
+            parsed = self._parse_ranking(content)
+            allowed = {b["id"] for b in candidates}
+            parsed.recommendations = [r for r in parsed.recommendations if r.book_id in allowed]
+            return parsed if parsed.recommendations else None
+        except Exception as exc:
+            logger.warning("TokenRouter Qwen ranking unavailable: %s", type(exc).__name__)
+            return None
 
     def transcribe(self, audio: bytes, mime_type: str) -> str | None:
         if not settings.gemini_api_key or not audio:

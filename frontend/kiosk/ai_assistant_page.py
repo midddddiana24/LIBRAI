@@ -117,31 +117,32 @@ def build(page: ft.Page) -> ft.View:
     async def process_spoken(spoken: str) -> None:
         recording["last_spoken"] = spoken
         retry_button.visible = False
+        command = resolve_voice_command(spoken)
+        # A recognized kiosk intent must work from every voice entry point.
+        # Older sessions can reopen this page in "dictate" mode, but that
+        # must not turn "I want to borrow a book" into an assistant question.
+        if command["action"] not in {"unknown", "ask"}:
+            speech.value = command["message"]
+            speech.color = Colors.SUCCESS
+            if command["action"] == "navigate":
+                page.go(command["route"])
+            elif command["action"] in {"search", "search_available", "clear_search"}:
+                page.client_storage.set("librai_pending_search", command["query"])
+                page.client_storage.set("librai_pending_available_only", command["action"] == "search_available")
+                page.go(Routes.SEARCH)
+            elif command["action"] == "back":
+                page.go(Routes.HOME)
+            return
         if mode.value != "command":
             prompt.value = spoken
             speech.value = "Speech converted to text. Review it, then press Ask."
             speech.color = Colors.SUCCESS
             return
-        command = resolve_voice_command(spoken)
         if command["action"] in {"unknown", "ask"}:
             prompt.value = command.get("query", spoken)
             speech.value = "Command not recognized. I placed the speech in the text box."
             speech.color = Colors.WARNING
             return
-        # Kiosk command mode is intentionally hands-free: recognized commands
-        # execute the requested navigation/workflow immediately. Confirmation
-        # controls remain available only in the internal state for compatibility
-        # with older sessions, but are not rendered in the kiosk composer.
-        speech.value = command["message"]
-        speech.color = Colors.SUCCESS
-        if command["action"] == "navigate":
-            page.go(command["route"])
-        elif command["action"] in {"search", "search_available", "clear_search"}:
-            page.client_storage.set("librai_pending_search", command["query"])
-            page.client_storage.set("librai_pending_available_only", command["action"] == "search_available")
-            page.go(Routes.SEARCH)
-        elif command["action"] == "back":
-            page.go(Routes.HOME)
 
     async def complete_recording() -> None:
         if not recording["active"]:

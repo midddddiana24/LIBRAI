@@ -43,7 +43,7 @@ def build(page: ft.Page) -> ft.View:
     speech = ft.Text("Use the microphone to speak your search.", size=11, color=Colors.TEXT_SECONDARY)
     progress = ft.Row(visible=False, controls=[ft.ProgressRing(width=20, height=20, stroke_width=3), ft.Text("Searching the library catalog…", size=12, color=Colors.TEXT_SECONDARY)])
     ask_button = ft.FilledButton("Ask", icon=ft.Icons.SEND_ROUNDED)
-    recorder = far.AudioRecorder(suppress_noise=True, cancel_echo=True, auto_gain=True, sample_rate=16000)
+    recorder = far.AudioRecorder()
     page.overlay.append(recorder)
     recording = {"active": False, "last_spoken": "", "pending_command": None}
     mic_button = ft.IconButton(ft.Icons.MIC_NONE_ROUNDED, tooltip="Speak your search")

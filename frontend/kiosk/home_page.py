@@ -89,7 +89,6 @@ def _hero(page: ft.Page) -> ft.Container:
                     width=500 if compact else 560,
                     content=SearchBar(
                         on_submit=search,
-                        on_mic_click=lambda _e: (page.client_storage.set("librai_voice_mode", "command"), page.go(Routes.AI_ASSISTANT)),
                         compact=True,
                     ),
                 ),

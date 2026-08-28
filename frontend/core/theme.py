@@ -13,7 +13,6 @@ everywhere with zero search-and-replace.
 from __future__ import annotations
 import flet as ft
 
-
 # ─────────────────────────────────────────────────────────────
 #  COLOUR PALETTE
 # ─────────────────────────────────────────────────────────────

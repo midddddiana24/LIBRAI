@@ -98,9 +98,7 @@ def AppHeader(
     if controller is None:
         recorder = far.AudioRecorder(suppress_noise=True, cancel_echo=True, auto_gain=True, sample_rate=16000)
         page.overlay.append(recorder)
-        reply_audio = ft.Audio(autoplay=False)
-        page.overlay.append(reply_audio)
-        controller = {"recorder": recorder, "reply_audio": reply_audio, "active": False, "path": None, "button": None, "status": None, "status_value": "Ready"}
+        controller = {"recorder": recorder, "reply_audio": None, "active": False, "path": None, "button": None, "status": None, "status_value": "Ready"}
         setattr(page, "_librai_voice_controller", controller)
 
     voice_button: ft.FilledButton
@@ -157,9 +155,11 @@ def AppHeader(
                 timeout=3,
             )
             if audio:
-                controller["reply_audio"].src_base64 = audio
-                controller["reply_audio"].autoplay = True
-                controller["reply_audio"].play()
+                reply_audio = ft.Audio(src_base64=audio, autoplay=True)
+                controller["reply_audio"] = reply_audio
+                page.overlay.append(reply_audio)
+                page.update()
+                reply_audio.play()
                 await asyncio.sleep(0.5)
             set_voice_status("Command completed", Colors.SUCCESS)
         except Exception:

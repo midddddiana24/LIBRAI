@@ -166,7 +166,8 @@ class ApiClient:
         """Upload one local file through the centralized authenticated client."""
         source = Path(file_path)
         if not source.is_file():
-            return ApiResult.failure(RequestState.VALIDATION_ERROR, "The selected image is no longer available.")
+            message = "The audio recording is no longer available." if field_name == "audio" else "The selected image is no longer available."
+            return ApiResult.failure(RequestState.VALIDATION_ERROR, message)
         headers = self._headers()
         headers.pop("Content-Type", None)
         media_type = mimetypes.guess_type(source.name)[0] or "application/octet-stream"
@@ -179,7 +180,8 @@ class ApiClient:
                     files={field_name: (source.name, handle, media_type)},
                 )
         except OSError:
-            return ApiResult.failure(RequestState.VALIDATION_ERROR, "The selected image could not be read.")
+            message = "The audio recording could not be read." if field_name == "audio" else "The selected image could not be read."
+            return ApiResult.failure(RequestState.VALIDATION_ERROR, message)
 
     def _resolve_media_urls(self, value: Any) -> Any:
         """Resolve API-relative image URLs so Flet requests them from FastAPI."""

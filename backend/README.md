@@ -54,7 +54,7 @@ remain backend-controlled. Never place either key in source code.
 
 ```text
 TOKENROUTER_API_KEY=your-tokenrouter-key
-TOKENROUTER_MODEL=qwen/qwen3.8-max-free
+TOKENROUTER_MODEL=z-ai/glm-5.3-free
 ```
 
 ## Tests

@@ -33,7 +33,7 @@ class GeminiClient:
     def rank(self, query: str, candidates: list[dict]) -> GeminiRanking | None:
         if not candidates: return None
         if settings.tokenrouter_api_key:
-            return self._rank_qwen(query, candidates)
+            return self._rank_tokenrouter(query, candidates)
         if not settings.gemini_api_key: return None
         safe = [{"book_id": b["id"], "title": b["title"], "author": b["author"], "category": b.get("category"), "description": b.get("description"), "keywords": b.get("keywords", []), "available_copies": b.get("available_copies"), "shelf_location": b.get("shelf_location")} for b in candidates]
         cache_key = json.dumps({"query": query.strip().lower(), "catalog": safe}, sort_keys=True, default=str)
@@ -69,8 +69,8 @@ class GeminiClient:
                 return None
         return None
 
-    def _rank_qwen(self, query: str, candidates: list[dict]) -> GeminiRanking | None:
-        """Rank catalog candidates with Qwen through TokenRouter."""
+    def _rank_tokenrouter(self, query: str, candidates: list[dict]) -> GeminiRanking | None:
+        """Rank catalog candidates with the configured TokenRouter model."""
         safe = [{"book_id": b["id"], "title": b["title"], "author": b["author"], "category": b.get("category"), "description": b.get("description"), "keywords": b.get("keywords", []), "available_copies": b.get("available_copies"), "shelf_location": b.get("shelf_location")} for b in candidates]
         prompt = "Only recommend books from the supplied library catalog. Never invent titles or IDs. Return strict JSON with message and recommendations [{book_id, reason}]. User query: " + query + "\nCatalog: " + json.dumps(safe)
         try:
@@ -87,7 +87,7 @@ class GeminiClient:
             parsed.recommendations = [r for r in parsed.recommendations if r.book_id in allowed]
             return parsed if parsed.recommendations else None
         except Exception as exc:
-            logger.warning("TokenRouter Qwen ranking unavailable: %s", type(exc).__name__)
+            logger.warning("TokenRouter ranking unavailable: %s", type(exc).__name__)
             return None
 
     def transcribe(self, audio: bytes, mime_type: str) -> str | None:

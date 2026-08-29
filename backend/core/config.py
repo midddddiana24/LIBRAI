@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-flash-lite-latest"
     tokenrouter_api_key: str | None = None
-    tokenrouter_model: str = "qwen/qwen3.8-max-free"
+    tokenrouter_model: str = "z-ai/glm-5.3-free"
     tokenrouter_base_url: str = "https://api.tokenrouter.com/v1"
     gemini_timeout_seconds: float = 12.0
     gemini_retry_count: int = 1

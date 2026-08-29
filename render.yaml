@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: librai-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: development
+      - key: DATABASE_URL
+        value: sqlite:///./librai.db
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: TOKENROUTER_API_KEY
+        sync: false
+      - key: TOKENROUTER_MODEL
+        value: z-ai/glm-5.3-free
+      - key: CORS_ORIGINS
+        value: https://librai-kiosk.onrender.com
+
+  - type: web
+    name: librai-kiosk
+    runtime: python
+    plan: free
+    buildCommand: pip install -r frontend/requirements.txt
+    startCommand: flet run --web --host 0.0.0.0 --port $PORT frontend/app.py
+    envVars:
+      - key: LIBRAI_API_BASE_URL
+        value: https://librai-api.onrender.com/api/v1
+      - key: LIBRAI_USE_MOCK_FALLBACK
+        value: "false"
+      - key: LIBRAI_DEFAULT_MODE
+        value: kiosk
+      - key: FLET_SECRET_KEY
+        generateValue: true

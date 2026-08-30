@@ -17,7 +17,28 @@ from core.state import get_state
 from core.theme import Colors, build_admin_theme, build_theme
 
 
+class _SessionStorage:
+    """Compatibility shim for the removed synchronous Flet client_storage API."""
+
+    def __init__(self) -> None:
+        self._values: dict[str, object] = {}
+
+    def get(self, key: str):
+        return self._values.get(key)
+
+    def set(self, key: str, value) -> None:
+        self._values[key] = value
+
+    def remove(self, key: str) -> None:
+        self._values.pop(key, None)
+
+
 def main(page: ft.Page) -> None:
+    # Flet 0.86 removed page.client_storage, but LIBRAI routes use its
+    # synchronous API during view construction. Keep session state available
+    # until those routes are migrated to async SharedPreferences.
+    if not hasattr(page, "client_storage"):
+        page.client_storage = _SessionStorage()
     state = get_state(page)
     page.title = "LIBRAI — AI-Powered Library Kiosk"
     kiosk_theme = build_theme()

@@ -52,7 +52,7 @@ def main(page: ft.Page) -> None:
         page.update()
 
     def view_pop(_event) -> None:
-        page.go("/")
+        page.push_route("/")
 
     async def enforce_kiosk_privacy() -> None:
         """Reset private kiosk state after the configured inactivity period."""
@@ -76,19 +76,19 @@ def main(page: ft.Page) -> None:
                 state.clear_kiosk()
                 page.client_storage.set("librai_voice_enabled", "false")
                 page.client_storage.remove("librai_voice_mode")
-                page.go(Routes.HOME)
+                page.push_route(Routes.HOME)
 
     page.on_route_change = route_change
     page.on_view_pop = view_pop
     page.run_task(enforce_kiosk_privacy)
-    page.go(page.route or "/")
+    page.push_route(page.route or "/")
 
 
 if __name__ == "__main__":
     os.environ.setdefault("FLET_SECRET_KEY", settings.flet_secret_key)
     settings.frontend_upload_directory.mkdir(parents=True, exist_ok=True)
-    ft.app(
-        target=main,
+    ft.run(
+        main=main,
         upload_dir=str(settings.frontend_upload_directory),
         assets_dir=str(Path(__file__).parent / "assets"),
     )

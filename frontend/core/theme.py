@@ -312,35 +312,35 @@ def build_admin_theme() -> ft.Theme:
     _shape   = ft.RoundedRectangleBorder(radius=Radius.SM)
     _txt_btn = ft.TextStyle(size=13, weight=ft.FontWeight.W_600)
 
-    t.filled_button_theme = ft.FilledButtonTheme(
+    # Flet 0.86 nests button properties under ButtonStyle; older releases
+    # accepted these values directly on FilledButtonTheme/OutlinedButtonTheme.
+    t.filled_button_theme = ft.FilledButtonTheme(style=ft.ButtonStyle(
         bgcolor=Colors.PRIMARY,
-        foreground_color=Colors.ON_PRIMARY,
+        color=Colors.ON_PRIMARY,
         elevation=0,
         padding=ft.padding.symmetric(horizontal=18, vertical=11),
         shape=_shape,
         text_style=_txt_btn,
         icon_size=17,
-        minimum_size=ft.Size(0, 40),
         enable_feedback=False,
-    )
-    t.outlined_button_theme = ft.OutlinedButtonTheme(
-        foreground_color=Colors.PRIMARY,
+    ))
+    t.outlined_button_theme = ft.OutlinedButtonTheme(style=ft.ButtonStyle(
+        color=Colors.PRIMARY,
         elevation=0,
         padding=ft.padding.symmetric(horizontal=16, vertical=10),
         shape=_shape,
-        border_side=ft.BorderSide(1.2, Colors.BORDER_STRONG),
+        side=ft.BorderSide(1.2, Colors.BORDER_STRONG),
         text_style=_txt_btn,
         icon_size=17,
-        minimum_size=ft.Size(0, 40),
         enable_feedback=False,
-    )
-    t.text_button_theme = ft.TextButtonTheme(
-        foreground_color=Colors.PRIMARY,
+    ))
+    t.text_button_theme = ft.TextButtonTheme(style=ft.ButtonStyle(
+        color=Colors.PRIMARY,
         padding=ft.padding.symmetric(horizontal=12, vertical=8),
         shape=_shape,
         text_style=_txt_btn,
         enable_feedback=False,
-    )
+    ))
     t.data_table_theme = ft.DataTableTheme(
         heading_row_color=Colors.SURFACE_ALT,
         heading_row_height=44,
@@ -356,7 +356,6 @@ def build_admin_theme() -> ft.Theme:
     t.dialog_theme = ft.DialogTheme(
         bgcolor=Colors.SURFACE,
         elevation=12,
-        surface_tint_color=Colors.SURFACE,
         shape=ft.RoundedRectangleBorder(radius=Radius.LG),
         title_text_style=ft.TextStyle(size=20, weight=ft.FontWeight.W_700, color=Colors.TEXT_PRIMARY),
         actions_padding=ft.padding.only(left=24, right=24, bottom=20, top=8),

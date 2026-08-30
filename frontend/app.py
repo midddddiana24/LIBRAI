@@ -51,8 +51,11 @@ def main(page: ft.Page) -> None:
         page.views.append(build_view(page.route, page))
         page.update()
 
+    async def go_home() -> None:
+        await page.push_route("/")
+
     def view_pop(_event) -> None:
-        page.push_route("/")
+        page.run_task(go_home)
 
     async def enforce_kiosk_privacy() -> None:
         """Reset private kiosk state after the configured inactivity period."""
@@ -76,12 +79,15 @@ def main(page: ft.Page) -> None:
                 state.clear_kiosk()
                 page.client_storage.set("librai_voice_enabled", "false")
                 page.client_storage.remove("librai_voice_mode")
-                page.push_route(Routes.HOME)
+                await page.push_route(Routes.HOME)
 
     page.on_route_change = route_change
     page.on_view_pop = view_pop
     page.run_task(enforce_kiosk_privacy)
-    page.push_route(page.route or "/")
+    async def initialize_route() -> None:
+        await page.push_route(page.route or "/")
+
+    page.run_task(initialize_route)
 
 
 if __name__ == "__main__":

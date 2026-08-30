@@ -13,6 +13,25 @@ everywhere with zero search-and-replace.
 from __future__ import annotations
 import flet as ft
 
+# Compatibility aliases for the existing LIBRAI components on Flet 0.86.
+if not hasattr(ft.border, "all"):
+    ft.border.all = ft.Border.all
+if not hasattr(ft.border, "only"):
+    ft.border.only = ft.Border.only
+if not hasattr(ft.border_radius, "only"):
+    ft.border_radius.only = ft.BorderRadius.only
+if not hasattr(ft.border_radius, "all"):
+    ft.border_radius.all = ft.BorderRadius.all
+for _name, (_x, _y) in {"center": (0, 0), "center_left": (-1, 0), "center_right": (1, 0), "top_center": (0, -1)}.items():
+    if not hasattr(ft.alignment, _name):
+        setattr(ft.alignment, _name, ft.Alignment(_x, _y))
+ft.padding.symmetric = ft.Padding.symmetric
+ft.padding.only = ft.Padding.only
+ft.padding.all = ft.Padding.all
+ft.margin.symmetric = ft.Margin.symmetric
+if not hasattr(ft, "ImageFit") and hasattr(ft, "BoxFit"):
+    ft.ImageFit = ft.BoxFit
+
 # ─────────────────────────────────────────────────────────────
 #  COLOUR PALETTE
 # ─────────────────────────────────────────────────────────────

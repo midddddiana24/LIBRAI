@@ -7,6 +7,7 @@ import flet_audio_recorder as far
 import uuid
 import asyncio
 import time
+import wave
 from pathlib import Path
 
 from components.alert import Alert
@@ -43,7 +44,22 @@ def build(page: ft.Page) -> ft.View:
     speech = ft.Text("Use the microphone to speak your search.", size=11, color=Colors.TEXT_SECONDARY)
     progress = ft.Row(visible=False, controls=[ft.ProgressRing(width=20, height=20, stroke_width=3), ft.Text("Searching the library catalog…", size=12, color=Colors.TEXT_SECONDARY)])
     ask_button = ft.FilledButton("Ask", icon=ft.Icons.SEND_ROUNDED)
-    recorder = far.AudioRecorder()
+    audio_chunks: list[bytes] = []
+    def on_audio_stream(event) -> None:
+        chunk = getattr(event, "chunk", b"")
+        if chunk:
+            audio_chunks.append(bytes(chunk))
+    recorder = far.AudioRecorder(
+        on_stream=on_audio_stream,
+        configuration=far.AudioRecorderConfiguration(
+            encoder=far.AudioEncoder.PCM16BITS,
+            channels=1,
+            sample_rate=16000,
+            suppress_noise=True,
+            cancel_echo=True,
+            auto_gain=True,
+        ),
+    )
     page.overlay.append(recorder)
     recording = {"active": False, "last_spoken": "", "pending_command": None}
     mic_button = ft.IconButton(ft.Icons.MIC_NONE_ROUNDED, tooltip="Speak your search")
@@ -97,8 +113,8 @@ def build(page: ft.Page) -> ft.View:
             else:
                 speech.value = "This device could not start microphone recording."
                 speech.color = Colors.ERROR
-        except Exception:
-            speech.value = "Microphone permission denied or unavailable. Allow microphone access in browser settings, then try again—or type instead."
+        except Exception as exc:
+            speech.value = f"Microphone error: {type(exc).__name__}. Check Windows microphone permission, then try again—or type instead."
             speech.color = Colors.ERROR
         page.update()
 
@@ -153,14 +169,20 @@ def build(page: ft.Page) -> ft.View:
         speech.value = "Processing speech..."
         speech.color = Colors.PRIMARY
         page.update()
-        # flet-audio-recorder 0.1.x exposes synchronous control methods.
-        # Keep the blocking device call off Flet's UI loop.
-        path = await asyncio.to_thread(recorder.stop_recording)
-        if not path:
+        await recorder.stop_recording()
+        chunks = audio_chunks[:]
+        audio_chunks.clear()
+        if not chunks:
             speech.value = "No recording was captured. You can type your request instead."
             speech.color = Colors.ERROR
             page.update()
             return
+        path = settings.frontend_upload_directory / f"speech-{uuid.uuid4().hex}.wav"
+        with wave.open(str(path), "wb") as wav_file:
+            wav_file.setnchannels(1)
+            wav_file.setsampwidth(2)
+            wav_file.setframerate(16000)
+            wav_file.writeframes(b"".join(chunks))
         result = await asyncio.to_thread(speech_service.transcribe, str(path))
         cleanup_recording(str(path))
         if result.ok:
@@ -211,9 +233,9 @@ def build(page: ft.Page) -> ft.View:
             await complete_recording()
             return
         settings.frontend_upload_directory.mkdir(parents=True, exist_ok=True)
-        output = settings.frontend_upload_directory / f"speech-{uuid.uuid4().hex}.wav"
         try:
-            if await asyncio.to_thread(recorder.start_recording, str(output)):
+            audio_chunks.clear()
+            if await recorder.start_recording():
                 recording["active"] = True
                 mic_button.icon = ft.Icons.STOP_CIRCLE_OUTLINED
                 mic_button.tooltip = "Stop recording"
@@ -223,8 +245,8 @@ def build(page: ft.Page) -> ft.View:
             else:
                 speech.value = "This device could not start microphone recording. You can type instead."
                 speech.color = Colors.ERROR
-        except Exception:
-            speech.value = "Microphone permission denied or unavailable. Allow microphone access in browser settings, then try again—or type instead."
+        except Exception as exc:
+            speech.value = f"Microphone error: {type(exc).__name__}. Check Windows microphone permission, then try again—or type instead."
             speech.color = Colors.ERROR
         page.update()
 

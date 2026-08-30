@@ -1,8 +1,9 @@
-flet==0.27.6
-flet-cli==0.27.6
-flet-web==0.27.6
-flet-desktop==0.27.6
-flet-audio-recorder==0.1.0
+flet==0.86.5
+flet-cli==0.86.5
+flet-web==0.86.5
+flet-desktop==0.86.5
+flet-audio-recorder==0.86.5
+flet-audio==0.86.5
 requests>=2.32,<3.0
 python-dotenv>=1.0,<2.0
 opencv-python-headless>=4.10,<5.0

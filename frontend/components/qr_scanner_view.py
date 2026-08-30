@@ -32,7 +32,7 @@ def QRScannerView(page: ft.Page, title: str, subtitle: str, on_scan: Callable[[s
     app_state = get_state(page)
     camera_state = {"running": False}
     verification_state = {"running": False}
-    preview = ft.Image(width=520, height=292, fit=ft.ImageFit.COVER, gapless_playback=True, visible=False)
+    preview = ft.Image(src="", width=520, height=292, fit=ft.ImageFit.COVER, gapless_playback=True, visible=False)
     placeholder = ft.Column(horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=Spacing.SM, controls=[ft.Icon(ft.Icons.VIDEOCAM_OUTLINED, size=56, color="#C7D7EA"), ft.Text("Camera preview", color="#DCE7F2", weight=ft.FontWeight.W_600), ft.Text("Place the QR code inside the frame", size=12, color="#8FA8C1")])
     status = ft.Text("Ready to scan", color=Colors.TEXT_SECONDARY, weight=ft.FontWeight.W_600)
     phase_nodes = [ft.Container(border_radius=Radius.PILL, padding=ft.padding.symmetric(horizontal=10, vertical=6)) for _ in range(3)]
@@ -179,10 +179,10 @@ def QRScannerView(page: ft.Page, title: str, subtitle: str, on_scan: Callable[[s
                     photo_status.color = Colors.ERROR
         page.update()
 
-    def photo_picked(event) -> None:
-        if not event.files:
+    def photo_picked(files) -> None:
+        if not files:
             return
-        selected = event.files[0]
+        selected = files[0]
         if selected.size and selected.size > 5*1024*1024:
             photo_status.value = "QR photo is larger than 5 MB. Choose a smaller image."
             photo_status.color = Colors.ERROR
@@ -204,14 +204,17 @@ def QRScannerView(page: ft.Page, title: str, subtitle: str, on_scan: Callable[[s
         page.update()
         photo_picker.upload([ft.FilePickerUploadFile(name=selected.name,upload_url=page.get_upload_url(staged_name,600))])
 
-    photo_picker = ft.FilePicker(on_result=photo_picked,on_upload=photo_uploaded)
+    photo_picker = ft.FilePicker(on_upload=photo_uploaded)
     page.overlay.append(photo_picker)
-    photo_button.on_click = lambda _event: photo_picker.pick_files(
+    async def choose_photo(_event) -> None:
+        files = await photo_picker.pick_files(
         dialog_title="Take or choose a QR photo",
         file_type=ft.FilePickerFileType.CUSTOM,
         allowed_extensions=["jpg","jpeg","png","webp"],
         allow_multiple=False,
-    )
+        )
+        photo_picked(files)
+    photo_button.on_click = choose_photo
 
     async def camera_loop() -> None:
         if cv2 is None:

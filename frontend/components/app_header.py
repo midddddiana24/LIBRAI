@@ -8,9 +8,11 @@ Reads from the design system — no hardcoded colors here.
 from __future__ import annotations
 import asyncio
 import uuid
+import wave
 from pathlib import Path
 import flet as ft
 import flet_audio_recorder as far
+from flet_audio import Audio
 
 from components.brand_logo import BrandLogo
 from core.config   import settings
@@ -21,6 +23,7 @@ from services.api_client import api_client
 from services.speech_service import speech_service
 from services.voice_command_service import resolve_voice_command
 from services.tts_service import tts_service
+from services.voice_activity_service import VoiceActivityDetector
 
 
 def AppHeader(
@@ -96,9 +99,24 @@ def AppHeader(
     voice_enabled = page.client_storage.get("librai_voice_enabled") == "true"
     controller = getattr(page, "_librai_voice_controller", None)
     if controller is None:
-        recorder = far.AudioRecorder(suppress_noise=True, cancel_echo=True, auto_gain=True, sample_rate=16000)
+        chunks: list[bytes] = []
+        def on_audio_stream(event) -> None:
+            chunk = getattr(event, "chunk", b"")
+            if chunk:
+                chunks.append(bytes(chunk))
+                if controller_ref.get("vad") and controller_ref["vad"].accept(bytes(chunk)) and not controller_ref.get("finish_scheduled"):
+                    controller_ref["finish_scheduled"] = True
+                    page.run_task(finish_voice)
+        controller_ref = {"vad": VoiceActivityDetector(), "finish_scheduled": False}
+        recorder = far.AudioRecorder(
+            on_stream=on_audio_stream,
+            configuration=far.AudioRecorderConfiguration(
+                encoder=far.AudioEncoder.PCM16BITS, channels=1, sample_rate=16000,
+                suppress_noise=True, cancel_echo=True, auto_gain=True,
+            ),
+        )
         page.overlay.append(recorder)
-        controller = {"recorder": recorder, "reply_audio": None, "active": False, "path": None, "button": None, "status": None, "status_value": "Ready"}
+        controller = {"recorder": recorder, "chunks": chunks, "reply_audio": None, "active": False, "path": None, "button": None, "status": None, "status_value": "Ready", **controller_ref}
         setattr(page, "_librai_voice_controller", controller)
 
     voice_button: ft.FilledButton
@@ -155,7 +173,7 @@ def AppHeader(
                 timeout=3,
             )
             if audio:
-                reply_audio = ft.Audio(src_base64=audio, autoplay=True)
+                reply_audio = Audio(src=audio, autoplay=True)
                 controller["reply_audio"] = reply_audio
                 page.overlay.append(reply_audio)
                 page.update()
@@ -169,16 +187,26 @@ def AppHeader(
         if not controller["active"]:
             return
         controller["active"] = False
+        controller["finish_scheduled"] = False
         set_voice_label("Processing…", active=True)
         set_voice_status("Processing", Colors.PRIMARY)
-        path = await asyncio.to_thread(controller["recorder"].stop_recording)
-        controller["path"] = path
-        if not path or str(path).startswith(("blob:", "http://", "https://")):
+        await controller["recorder"].stop_recording()
+        chunks = controller["chunks"]
+        controller["chunks"] = []
+        if not chunks:
             set_voice_label("Voice ON")
-            set_voice_status("Browser audio unavailable; use native kiosk mode", Colors.ERROR)
+            set_voice_status("No audio captured; check microphone permission", Colors.ERROR)
             if voice_is_enabled():
                 page.run_task(listen_again)
             return
+        output = settings.frontend_upload_directory / f"speech-{uuid.uuid4().hex}.wav"
+        with wave.open(str(output), "wb") as wav_file:
+            wav_file.setnchannels(1)
+            wav_file.setsampwidth(2)
+            wav_file.setframerate(16000)
+            wav_file.writeframes(b"".join(chunks))
+        path = str(output)
+        controller["path"] = path
         result = await asyncio.to_thread(speech_service.transcribe, str(path))
         cleanup_voice_file(str(path))
         if result.ok:
@@ -209,28 +237,31 @@ def AppHeader(
             pass
         if controller["active"]:
             controller["active"] = False
-            path = await asyncio.to_thread(controller["recorder"].stop_recording)
-            cleanup_voice_file(str(path) if path else None)
+            await controller["recorder"].stop_recording()
+            controller["chunks"] = []
+            controller["finish_scheduled"] = False
+            controller["vad"].reset()
         set_voice_label("Voice OFF")
 
     async def start_voice() -> None:
         if controller["active"]:
             return
         settings.frontend_upload_directory.mkdir(parents=True, exist_ok=True)
-        output = settings.frontend_upload_directory / f"speech-{uuid.uuid4().hex}.wav"
         try:
-            started = await asyncio.to_thread(controller["recorder"].start_recording, str(output))
-        except Exception:
+            controller["chunks"] = []
+            started = await controller["recorder"].start_recording()
+        except Exception as exc:
             started = False
+            set_voice_status(f"Microphone error: {type(exc).__name__}", Colors.ERROR)
         if not started:
-            set_voice_status("Microphone unavailable", Colors.ERROR)
+            if controller.get("status_value") == "Ready":
+                set_voice_status("Microphone unavailable; check Windows permission", Colors.ERROR)
             set_voice_label("Voice OFF")
             return
         controller["active"] = True
-        controller["path"] = output
         set_voice_status("Listening", Colors.PRIMARY)
         set_voice_label("Listening…", active=True)
-        await asyncio.sleep(6)
+        await asyncio.sleep(15)
         if controller["active"]:
             await finish_voice()
 

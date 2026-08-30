@@ -35,7 +35,9 @@ class ImagePickerControl:
             alignment=ft.alignment.center,
             content=ft.Image(src=current_url, fit=ft.ImageFit.COVER) if current_url else ft.Icon(ft.Icons.ADD_A_PHOTO_OUTLINED, color=Colors.PRIMARY),
         )
-        self.picker = ft.FilePicker(on_result=self._picked, on_upload=self._uploaded)
+        # Flet 0.86 returns selected files from pick_files() instead of
+        # sending an on_result event. Upload progress still uses on_upload.
+        self.picker = ft.FilePicker(on_upload=self._uploaded)
         page.overlay.append(self.picker)
         self.control = ft.Container(
             bgcolor=Colors.SURFACE_ALT,
@@ -65,18 +67,19 @@ class ImagePickerControl:
     def ready(self) -> bool:
         return self.selected_path is not None and self.selected_path.is_file()
 
-    def _choose(self, _event) -> None:
-        self.picker.pick_files(
+    async def _choose(self, _event) -> None:
+        files = await self.picker.pick_files(
             dialog_title=self.label,
             file_type=ft.FilePickerFileType.CUSTOM,
             allowed_extensions=["jpg", "jpeg", "png", "webp"],
             allow_multiple=False,
         )
+        self._picked(files)
 
-    def _picked(self, event) -> None:
-        if not event.files:
+    def _picked(self, files) -> None:
+        if not files:
             return
-        selected = event.files[0]
+        selected = files[0]
         if selected.size and selected.size > 5 * 1024 * 1024:
             self.status.value = "Image is larger than 5 MB. Choose a smaller file."
             self.status.color = Colors.ERROR

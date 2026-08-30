@@ -368,18 +368,17 @@ def build(page: ft.Page) -> ft.View:
         state["offset"] = 0
         load()
 
-    def import_csv(_event=None) -> None:
-        csv_picker.pick_files(dialog_title="Import catalog CSV", allowed_extensions=["csv"], allow_multiple=False)
+    async def import_csv(_event=None) -> None:
+        files = await csv_picker.pick_files(dialog_title="Import catalog CSV", allowed_extensions=["csv"], allow_multiple=False)
+        csv_selected(files)
 
-    def csv_selected(event) -> None:
-        if not event.files:
+    def csv_selected(files) -> None:
+        if not files:
             return
-        result = admin_catalog_service.import_books(event.files[0].path)
+        result = admin_catalog_service.import_books(files[0].path)
         show_notice("success" if result.ok else result.error_kind, "Catalog imported successfully." if result.ok else result.message, "Import complete" if result.ok else "Import failed")
         if result.ok:
             load()
-
-    csv_picker.on_result = csv_selected
 
     search.on_submit = new_search
     include_archived.on_change = new_search

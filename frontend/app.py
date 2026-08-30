@@ -51,11 +51,8 @@ def main(page: ft.Page) -> None:
         page.views.append(build_view(page.route, page))
         page.update()
 
-    async def go_home() -> None:
-        await page.push_route("/")
-
     def view_pop(_event) -> None:
-        page.run_task(go_home)
+        page.go("/")
 
     async def enforce_kiosk_privacy() -> None:
         """Reset private kiosk state after the configured inactivity period."""
@@ -84,10 +81,10 @@ def main(page: ft.Page) -> None:
     page.on_route_change = route_change
     page.on_view_pop = view_pop
     page.run_task(enforce_kiosk_privacy)
-    async def initialize_route() -> None:
-        await page.push_route(page.route or "/")
-
-    page.run_task(initialize_route)
+    # Flet web reliably dispatches the first route through go(). In 0.86 this
+    # emits a deprecation warning, but push_route() can leave a blank session
+    # when called before the web page is fully attached.
+    page.go(page.route or "/")
 
 
 if __name__ == "__main__":

@@ -193,10 +193,10 @@ def build(page: ft.Page) -> ft.View:
             icon=ft.Icons.MORE_HORIZ_ROUNDED,
             tooltip="User actions",
             items=[
-                ft.PopupMenuItem(text="Edit user", icon=ft.Icons.EDIT_OUTLINED, on_click=lambda _e: open_user_form(user)),
-                ft.PopupMenuItem(text="Borrowing history", icon=ft.Icons.HISTORY_ROUNDED, on_click=lambda _e: show_history(user)),
-                ft.PopupMenuItem(text="View QR", icon=ft.Icons.QR_CODE_2_ROUNDED, on_click=lambda _e: view_user_qr(user)),
-                ft.PopupMenuItem(text="Replace QR", icon=ft.Icons.REFRESH_ROUNDED, on_click=lambda _e: rotate_user_qr(user)),
+                ft.PopupMenuItem(content="Edit user", icon=ft.Icons.EDIT_OUTLINED, on_click=lambda _e: open_user_form(user)),
+                ft.PopupMenuItem(content="Borrowing history", icon=ft.Icons.HISTORY_ROUNDED, on_click=lambda _e: show_history(user)),
+                ft.PopupMenuItem(content="View QR", icon=ft.Icons.QR_CODE_2_ROUNDED, on_click=lambda _e: view_user_qr(user)),
+                ft.PopupMenuItem(content="Replace QR", icon=ft.Icons.REFRESH_ROUNDED, on_click=lambda _e: rotate_user_qr(user)),
             ],
         )
 

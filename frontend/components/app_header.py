@@ -99,24 +99,55 @@ def AppHeader(
     voice_enabled = page.client_storage.get("librai_voice_enabled") == "true"
     controller = getattr(page, "_librai_voice_controller", None)
     if controller is None:
-        chunks: list[bytes] = []
+        # One shared append-only buffer. The stream callback closes over this
+        # exact object, so it must NEVER be rebound — only its inner list may
+        # be cleared. Rebinding `controller["chunks"]` while the closure still
+        # appends to the original list is how recordings were lost before.
+        buffer = {"data": bytearray()}
+
         def on_audio_stream(event) -> None:
             chunk = getattr(event, "chunk", b"")
-            if chunk:
-                chunks.append(bytes(chunk))
-                if controller_ref.get("vad") and controller_ref["vad"].accept(bytes(chunk)) and not controller_ref.get("finish_scheduled"):
-                    controller_ref["finish_scheduled"] = True
-                    page.run_task(finish_voice)
-        controller_ref = {"vad": VoiceActivityDetector(), "finish_scheduled": False}
-        recorder = far.AudioRecorder(
-            on_stream=on_audio_stream,
-            configuration=far.AudioRecorderConfiguration(
-                encoder=far.AudioEncoder.PCM16BITS, channels=1, sample_rate=16000,
-                suppress_noise=True, cancel_echo=True, auto_gain=True,
-            ),
-        )
-        page.overlay.append(recorder)
-        controller = {"recorder": recorder, "chunks": chunks, "reply_audio": None, "active": False, "path": None, "button": None, "status": None, "status_value": "Ready", **controller_ref}
+            if not chunk:
+                return
+            payload = bytes(chunk)
+            buffer["data"] += payload
+            if (
+                controller["active"]
+                and not controller["finish_scheduled"]
+                and controller["vad"].accept(payload)
+            ):
+                controller["finish_scheduled"] = True
+                page.run_task(finish_voice)
+
+        # AudioRecorder is a native Flet service. Some Flet web builds do not
+        # ship its Flutter extension and report "Unknown control". Never add
+        # that control to a browser page; keep the kiosk usable with typing.
+        recorder = None
+        if not getattr(page, "web", False):
+            recorder = far.AudioRecorder(
+                on_stream=on_audio_stream,
+                configuration=far.AudioRecorderConfiguration(
+                    encoder=far.AudioEncoder.PCM16BITS, channels=1, sample_rate=16000,
+                    suppress_noise=True, cancel_echo=True, auto_gain=True,
+                ),
+            )
+            # Services register themselves with the page on construction; the
+            # overlay reference only keeps them from being garbage collected
+            # between route rebuilds.
+            page.overlay.append(recorder)
+        controller = {
+            "recorder": recorder,
+            "buffer": buffer,
+            "vad": VoiceActivityDetector(),
+            "finish_scheduled": False,
+            "generation": 0,
+            "reply_audio": None,
+            "active": False,
+            "path": None,
+            "button": None,
+            "status": None,
+            "status_value": "Ready",
+        }
         setattr(page, "_librai_voice_controller", controller)
 
     voice_button: ft.FilledButton
@@ -160,12 +191,15 @@ def AppHeader(
                 pass
 
     async def listen_again() -> None:
-        await asyncio.sleep(0.6)
+        await asyncio.sleep(1.2)
         if voice_is_enabled() and not controller["active"]:
             await start_voice()
 
     async def speak_reply(reply: str) -> None:
         """Speak without delaying the kiosk navigation."""
+        if not reply:
+            set_voice_status("Command completed", Colors.SUCCESS)
+            return
         set_voice_status("Speaking", Colors.PRIMARY)
         try:
             audio = await asyncio.wait_for(
@@ -173,6 +207,15 @@ def AppHeader(
                 timeout=3,
             )
             if audio:
+                # Release any previous reply player so repeated commands do
+                # not stack Audio services on the page.
+                previous = controller.get("reply_audio")
+                if previous is not None:
+                    try:
+                        await previous.release()
+                        page.overlay.remove(previous)
+                    except Exception:
+                        pass
                 reply_audio = Audio(src=audio, autoplay=True)
                 controller["reply_audio"] = reply_audio
                 page.overlay.append(reply_audio)
@@ -191,9 +234,9 @@ def AppHeader(
         set_voice_label("Processing…", active=True)
         set_voice_status("Processing", Colors.PRIMARY)
         await controller["recorder"].stop_recording()
-        chunks = controller["chunks"]
-        controller["chunks"] = []
-        if not chunks:
+        captured = bytes(controller["buffer"]["data"])
+        controller["buffer"]["data"] = bytearray()
+        if not captured:
             set_voice_label("Voice ON")
             set_voice_status("No audio captured; check microphone permission", Colors.ERROR)
             if voice_is_enabled():
@@ -204,7 +247,7 @@ def AppHeader(
             wav_file.setnchannels(1)
             wav_file.setsampwidth(2)
             wav_file.setframerate(16000)
-            wav_file.writeframes(b"".join(chunks))
+            wav_file.writeframes(captured)
         path = str(output)
         controller["path"] = path
         result = await asyncio.to_thread(speech_service.transcribe, str(path))
@@ -235,20 +278,32 @@ def AppHeader(
             page.client_storage.set("librai_voice_enabled", "false")
         except (TimeoutError, RuntimeError):
             pass
+        # Invalidate any pending auto-finish / timer from this session.
+        controller["generation"] += 1
         if controller["active"]:
             controller["active"] = False
             await controller["recorder"].stop_recording()
-            controller["chunks"] = []
+            controller["buffer"]["data"] = bytearray()
             controller["finish_scheduled"] = False
-            controller["vad"].reset()
+        controller["vad"].reset()
         set_voice_label("Voice OFF")
 
     async def start_voice() -> None:
         if controller["active"]:
             return
+        if controller["recorder"] is None:
+            set_voice_status("Browser microphone extension unavailable; use typed input", Colors.WARNING)
+            set_voice_label("Voice OFF")
+            return
         settings.frontend_upload_directory.mkdir(parents=True, exist_ok=True)
+        # Fresh detector state for every utterance. Without this, a previous
+        # recording's "silence tail" instantly finishes the next command.
+        controller["vad"].reset()
+        controller["buffer"]["data"] = bytearray()
+        controller["finish_scheduled"] = False
+        controller["generation"] += 1
+        generation = controller["generation"]
         try:
-            controller["chunks"] = []
             started = await controller["recorder"].start_recording()
         except Exception as exc:
             started = False
@@ -262,7 +317,10 @@ def AppHeader(
         set_voice_status("Listening", Colors.PRIMARY)
         set_voice_label("Listening…", active=True)
         await asyncio.sleep(15)
-        if controller["active"]:
+        # Only this recording's timer may finish it. A VAD finish for an
+        # earlier utterance starts a new recording whose timer must not be
+        # killed by this stale coroutine.
+        if controller["active"] and controller["generation"] == generation:
             await finish_voice()
 
     def toggle_voice(_event) -> None:

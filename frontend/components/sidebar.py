@@ -74,19 +74,19 @@ def AdminMenu(page: ft.Page, active_route: str) -> ft.PopupMenuButton:
     items: list[ft.PopupMenuItem] = []
     for route, icon, label in _ALL_NAV:
         items.append(ft.PopupMenuItem(
-            text=label,
+            content=label,
             icon=ft.Icons.CHECK_ROUNDED if route == active_route else icon,
             on_click=lambda _e, r=route: page.go(r),
         ))
     items += [
         ft.PopupMenuItem(),  # divider
         ft.PopupMenuItem(
-            text="Back to kiosk",
+            content="Back to kiosk",
             icon=ft.Icons.STORE_ROUNDED,
             on_click=lambda _e: page.go(Routes.HOME),
         ),
         ft.PopupMenuItem(
-            text="Sign out",
+            content="Sign out",
             icon=ft.Icons.LOGOUT_ROUNDED,
             on_click=lambda _e: _logout(page),
         ),

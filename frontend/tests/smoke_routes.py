@@ -64,14 +64,14 @@ def main() -> None:
         "popular_categories": [{"category": "Technology", "count": 4}],
     })
     page.route = Routes.ADMIN_DASHBOARD
-    build_view(Routes.ADMIN_DASHBOARD, page)._build_add_commands()
+    build_view(Routes.ADMIN_DASHBOARD, page)
     admin_service.dashboard = original_dashboard
     original_books = admin_catalog_service.list_books
     original_users = admin_catalog_service.list_users
     admin_catalog_service.list_books = lambda *args, **kwargs: ApiResult.success({"items": [{"id": 1, "isbn": "9780000000001", "title": "Test Book", "author": "Test Author", "category": "Technology", "available_copies": 1, "total_copies": 2, "shelf_location": "A-01", "is_archived": False}], "total": 1})
     admin_catalog_service.list_users = lambda *args, **kwargs: ApiResult.success({"items": [{"id": 1, "display_name": "Test Student", "student_id": "2026-0001", "course": "BSIT", "year_level": "3", "email": "student@example.test", "active_borrowing_count": 1, "has_overdue_books": False, "status": "active"}], "total": 1})
-    build_view(Routes.ADMIN_BOOKS, page)._build_add_commands()
-    build_view(Routes.ADMIN_USERS, page)._build_add_commands()
+    build_view(Routes.ADMIN_BOOKS, page)
+    build_view(Routes.ADMIN_USERS, page)
     admin_catalog_service.list_books = original_books
     admin_catalog_service.list_users = original_users
     admin_routes = [Routes.ADMIN_DASHBOARD, Routes.ADMIN_BOOKS, Routes.ADMIN_USERS, Routes.ADMIN_BORROWINGS, Routes.ADMIN_RETURNS, Routes.ADMIN_RESERVATIONS, Routes.ADMIN_REPORTS, Routes.ADMIN_AUDIT_LOGS, Routes.ADMIN_SETTINGS]

@@ -292,13 +292,13 @@ def build(page: ft.Page) -> ft.View:
 
     def actions(book: dict) -> ft.PopupMenuButton:
         items = [
-            ft.PopupMenuItem(text="Edit catalog record", icon=ft.Icons.EDIT_OUTLINED, on_click=lambda _e: open_book_form(book)),
-            ft.PopupMenuItem(text="Manage physical copies", icon=ft.Icons.COPY_ALL_ROUNDED, on_click=lambda _e: open_copies(book)),
+            ft.PopupMenuItem(content="Edit catalog record", icon=ft.Icons.EDIT_OUTLINED, on_click=lambda _e: open_book_form(book)),
+            ft.PopupMenuItem(content="Manage physical copies", icon=ft.Icons.COPY_ALL_ROUNDED, on_click=lambda _e: open_copies(book)),
         ]
         if not book.get("is_archived"):
-            items.append(ft.PopupMenuItem(text="Archive title", icon=ft.Icons.ARCHIVE_OUTLINED, on_click=lambda _e: archive(book)))
+            items.append(ft.PopupMenuItem(content="Archive title", icon=ft.Icons.ARCHIVE_OUTLINED, on_click=lambda _e: archive(book)))
         else:
-            items.append(ft.PopupMenuItem(text="Restore title", icon=ft.Icons.UNARCHIVE_OUTLINED, on_click=lambda _e: restore(book)))
+            items.append(ft.PopupMenuItem(content="Restore title", icon=ft.Icons.UNARCHIVE_OUTLINED, on_click=lambda _e: restore(book)))
         return ft.PopupMenuButton(icon=ft.Icons.MORE_HORIZ_ROUNDED, tooltip="Book actions", items=items)
 
     def load(_event=None, show_loading: bool = True) -> None:

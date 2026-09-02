@@ -46,7 +46,7 @@ def build(page: ft.Page) -> ft.View:
         contact = admin_text_field(label="Contact number", value=str(source.get("contact_number") or ""), col={"sm":12,"md":6})
         status = admin_dropdown(label="Account status", value=str(source.get("status") or "ACTIVE").upper(), options=[ft.dropdown.Option(x) for x in USER_STATUSES], col=12)
         form_notice = ft.Column()
-        photo_picker = ImagePickerControl(page, "User profile photo", source.get("photo_url"))
+        photo_picker = ImagePickerControl(page, "User profile photo", source.get("photo_url"), purpose="user_photo")
 
         def close_form() -> None:
             photo_picker.cleanup()

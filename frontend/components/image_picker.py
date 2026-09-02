@@ -9,12 +9,13 @@ import flet as ft
 
 from core.config import settings
 from core.theme import Colors, Radius, Spacing
+from services.kiosk_services import get_named_picker
 
 
 class ImagePickerControl:
     """Select one image on desktop or web and expose its readable local path."""
 
-    def __init__(self, page: ft.Page, label: str, current_url: str | None = None) -> None:
+    def __init__(self, page: ft.Page, label: str, current_url: str | None = None, purpose: str = "book_cover") -> None:
         self.page = page
         self.label = label
         self.selected_path: Path | None = None
@@ -35,10 +36,11 @@ class ImagePickerControl:
             alignment=ft.alignment.center,
             content=ft.Image(src=current_url, fit=ft.ImageFit.COVER) if current_url else ft.Icon(ft.Icons.ADD_A_PHOTO_OUTLINED, color=Colors.PRIMARY),
         )
-        # Flet 0.86 returns selected files from pick_files() instead of
-        # sending an on_result event. Upload progress still uses on_upload.
-        self.picker = ft.FilePicker(on_upload=self._uploaded)
-        page.overlay.append(self.picker)
+        # Shared pre-created FilePicker service (mounted in page.services
+        # before the first client sync); overlay-mounted pickers never
+        # answer pick_files on the 0.86.5 desktop client.
+        self.picker = get_named_picker(page, purpose)
+        self.picker.on_upload = self._uploaded
         self.control = ft.Container(
             bgcolor=Colors.SURFACE_ALT,
             border=ft.border.all(1, Colors.BORDER),

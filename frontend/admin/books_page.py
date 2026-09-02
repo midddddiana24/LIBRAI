@@ -13,6 +13,7 @@ from components.sidebar import AdminView
 from core.constants import Routes
 from core.theme import Colors, Spacing
 from services.admin_catalog_service import admin_catalog_service
+from services.kiosk_services import get_named_picker
 
 
 PAGE_SIZE = 25
@@ -34,8 +35,7 @@ def build(page: ft.Page) -> ft.View:
     notice = ft.Column(spacing=Spacing.SM)
     body = ft.Column(spacing=Spacing.MD, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
     pager = ft.Row(alignment=ft.MainAxisAlignment.END, spacing=Spacing.SM)
-    csv_picker = ft.FilePicker()
-    page.overlay.append(csv_picker)
+    csv_picker = get_named_picker(page, "csv_import")
 
     def show_notice(kind: str, message: str, title: str | None = None) -> None:
         notice.controls = [Alert(kind, message, title=title)]

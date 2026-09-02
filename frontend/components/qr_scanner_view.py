@@ -13,6 +13,7 @@ import flet as ft
 from core.config import settings
 from core.state import get_state
 from core.theme import Colors, Radius, Spacing
+from services.kiosk_services import get_picker
 from services.qr_service import qr_service
 
 try:  # Optional until the frontend requirements are installed again.
@@ -32,7 +33,12 @@ def QRScannerView(page: ft.Page, title: str, subtitle: str, on_scan: Callable[[s
     app_state = get_state(page)
     camera_state = {"running": False}
     verification_state = {"running": False}
-    preview = ft.Image(src="", width=520, height=292, fit=ft.ImageFit.COVER, gapless_playback=True, visible=False)
+    # 1x1 transparent PNG placeholder; Flet 0.86 Image requires a valid src.
+    _blank_png = (
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk"
+        "YPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+    )
+    preview = ft.Image(src=_blank_png, width=520, height=292, fit=ft.ImageFit.COVER, gapless_playback=True, visible=False)
     placeholder = ft.Column(horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=Spacing.SM, controls=[ft.Icon(ft.Icons.VIDEOCAM_OUTLINED, size=56, color="#C7D7EA"), ft.Text("Camera preview", color="#DCE7F2", weight=ft.FontWeight.W_600), ft.Text("Place the QR code inside the frame", size=12, color="#8FA8C1")])
     status = ft.Text("Ready to scan", color=Colors.TEXT_SECONDARY, weight=ft.FontWeight.W_600)
     phase_nodes = [ft.Container(border_radius=Radius.PILL, padding=ft.padding.symmetric(horizontal=10, vertical=6)) for _ in range(3)]
@@ -204,15 +210,25 @@ def QRScannerView(page: ft.Page, title: str, subtitle: str, on_scan: Callable[[s
         page.update()
         photo_picker.upload([ft.FilePickerUploadFile(name=selected.name,upload_url=page.get_upload_url(staged_name,600))])
 
-    photo_picker = ft.FilePicker(on_upload=photo_uploaded)
-    page.overlay.append(photo_picker)
+    photo_picker = get_picker(page)
+    # Each route rebuild installs its own upload handler; only one scanner
+    # view is alive at a time, so the shared service always points at the
+    # active page's state.
+    photo_picker.on_upload = photo_uploaded
+
     async def choose_photo(_event) -> None:
-        files = await photo_picker.pick_files(
-        dialog_title="Take or choose a QR photo",
-        file_type=ft.FilePickerFileType.CUSTOM,
-        allowed_extensions=["jpg","jpeg","png","webp"],
-        allow_multiple=False,
-        )
+        try:
+            files = await photo_picker.pick_files(
+                dialog_title="Take or choose a QR photo",
+                file_type=ft.FilePickerFileType.CUSTOM,
+                allowed_extensions=["jpg", "jpeg", "png", "webp"],
+                allow_multiple=False,
+            )
+        except Exception:
+            photo_status.value = "The photo picker did not respond. Type the QR token below instead."
+            photo_status.color = Colors.WARNING
+            page.update()
+            return
         photo_picked(files)
     photo_button.on_click = choose_photo
 
@@ -251,7 +267,8 @@ def QRScannerView(page: ft.Page, title: str, subtitle: str, on_scan: Callable[[s
                 frame = cv2.resize(frame, (520, 292))
                 encoded_ok, buffer = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 72])
                 if encoded_ok:
-                    preview.src_base64 = base64.b64encode(buffer).decode("ascii")
+                    # Flet 0.86 removed Image.src_base64; raw bytes/URIs go to src.
+                    preview.src = "data:image/jpeg;base64," + base64.b64encode(buffer).decode("ascii")
                     preview.visible = True
                     placeholder.visible = False
                     page.update()

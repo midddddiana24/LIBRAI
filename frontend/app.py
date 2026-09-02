@@ -50,6 +50,11 @@ def main(page: ft.Page) -> None:
     page.window.width = settings.window_width
     page.window.height = settings.window_height
     page.window.full_screen = settings.fullscreen
+    # Flet 0.86 desktop services only answer method calls when mounted in
+    # page.services before the first client sync. Attach before any view.
+    from services.kiosk_services import attach
+
+    attach(page, web=bool(getattr(page, "web", False)))
 
     def route_change(_event) -> None:
         state.touch()

@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import flet as ft
-import flet_audio_recorder as far
 import uuid
 import asyncio
 import time
-import wave
 from pathlib import Path
 
 from components.alert import Alert
@@ -17,6 +15,7 @@ from core.constants import Routes
 from core.state import get_state
 from core.theme import Colors, Radius, Spacing
 from services.ai_service import ai_service
+from services.kiosk_services import get_recorder
 from services.speech_service import speech_service
 from services.voice_command_service import resolve_voice_command
 from core.config import settings
@@ -44,37 +43,12 @@ def build(page: ft.Page) -> ft.View:
     speech = ft.Text("Use the microphone to speak your search.", size=11, color=Colors.TEXT_SECONDARY)
     progress = ft.Row(visible=False, controls=[ft.ProgressRing(width=20, height=20, stroke_width=3), ft.Text("Searching the library catalog…", size=12, color=Colors.TEXT_SECONDARY)])
     ask_button = ft.FilledButton("Ask", icon=ft.Icons.SEND_ROUNDED)
-    recording = {"active": False, "last_spoken": "", "pending_command": None}
+    recording = {"active": False, "last_spoken": "", "path": None}
 
-    # One microphone service per page, shared with the header controller.
-    # Rebuilding this route must not stack extra AudioRecorder services.
-    header_controller = getattr(page, "_librai_voice_controller", None)
-    recorder = None
-    if not getattr(page, "web", False):
-        buffer = {"data": bytearray()}
-
-        def on_audio_stream(event) -> None:
-            chunk = getattr(event, "chunk", b"")
-            if chunk:
-                buffer["data"] += bytes(chunk)
-
-        recorder = far.AudioRecorder(
-            on_stream=on_audio_stream,
-            configuration=far.AudioRecorderConfiguration(
-                encoder=far.AudioEncoder.PCM16BITS,
-                channels=1,
-                sample_rate=16000,
-                suppress_noise=True,
-                cancel_echo=True,
-                auto_gain=True,
-            ),
-        )
-        if header_controller is None:
-            page.overlay.append(recorder)
-        # Strong reference so Flet's service garbage collector does not
-        # unregister this recorder between events; rebuilt pages replace it.
-        setattr(page, "_librai_assistant_recorder", recorder)
-        recording["buffer"] = buffer
+    # Shared microphone service created once per session (see
+    # services/kiosk_services.py). The 0.86.5 Windows client never emits
+    # on_stream chunks, so this page records straight to a WAV file.
+    recorder = get_recorder(page)
 
     mic_button = ft.IconButton(ft.Icons.MIC_NONE_ROUNDED, tooltip="Speak your search")
     command_mode = "dictate"
@@ -89,22 +63,23 @@ def build(page: ft.Page) -> ft.View:
         speech.value = "Processing speech..."
         speech.color = Colors.PRIMARY
         page.update()
-        await recorder.stop_recording()
-        buffer = recording.get("buffer")
-        captured = bytes(buffer["data"]) if buffer else b""
-        if buffer:
-            buffer["data"] = bytearray()
-        if not captured:
+        path = None
+        try:
+            path = await recorder.stop_recording()
+        except Exception:
+            path = None
+        if not path or str(path).startswith(("blob:", "http://", "https://")):
             speech.value = "No recording was captured. You can type your request instead."
             speech.color = Colors.ERROR
             page.update()
             return
-        path = settings.frontend_upload_directory / f"speech-{uuid.uuid4().hex}.wav"
-        with wave.open(str(path), "wb") as wav_file:
-            wav_file.setnchannels(1)
-            wav_file.setsampwidth(2)
-            wav_file.setframerate(16000)
-            wav_file.writeframes(captured)
+        candidate = Path(str(path))
+        if not candidate.is_file() or candidate.stat().st_size < 1000:
+            cleanup_recording(str(path))
+            speech.value = "No words recognized. Speak after the mic turns on, or type instead."
+            speech.color = Colors.ERROR
+            page.update()
+            return
         result = await asyncio.to_thread(speech_service.transcribe, str(path))
         cleanup_recording(str(path))
         if result.ok:
@@ -129,12 +104,11 @@ def build(page: ft.Page) -> ft.View:
             await complete_recording()
             return
         settings.frontend_upload_directory.mkdir(parents=True, exist_ok=True)
-        buffer = recording.get("buffer")
-        if buffer:
-            buffer["data"] = bytearray()
+        output = settings.frontend_upload_directory / f"speech-{uuid.uuid4().hex}.wav"
         try:
-            if await recorder.start_recording():
+            if await recorder.start_recording(output_path=str(output)):
                 recording["active"] = True
+                recording["path"] = str(output)
                 mic_button.icon = ft.Icons.STOP_CIRCLE_OUTLINED
                 mic_button.tooltip = "Stop recording"
                 speech.value = "Listening (up to 15 seconds)"

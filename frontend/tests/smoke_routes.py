@@ -30,6 +30,8 @@ class PageStub:
         self.route = Routes.HOME
         self.client_storage = Storage()
         self.overlay = []
+        self.services = []
+        self.width = 1366
     def go(self, route): self.route = route
     def update(self): pass
     def open(self, _control): pass

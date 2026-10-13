@@ -67,7 +67,7 @@ or other credential material.
 | GET | `/search/books` | Public | `q,category,author,available_only,publication_year,offset,limit` → `{items,total}` | SQL metadata search; records meaningful query analytics. |
 | POST | `/ai/search` | Public or user QR grant | `{query,user_id?,user_verification_token?}` → `{query,answer,message,books,ai_available,fallback_used}` | A user ID requires its grant; database candidates first; Gemini only ranks supplied IDs. |
 | POST | `/ai/recommend` | Public or user QR grant | `{user_id?,kind,user_verification_token?}` → book array | Deterministic history/category/popularity/availability ranking. |
-| POST | `/speech/transcribe` | Public | multipart audio → `{text}` | Returns `501` until a Whisper/Vosk adapter is configured; typing is unaffected. |
+| POST | `/speech/transcribe` | Public | multipart audio → `{text}` | Gemini transcription requires `GEMINI_API_KEY`; returns `503` without it, `502` if transcription fails, and rejects invalid or oversized uploads. No backend text-to-speech endpoint exists. |
 
 ## Borrowing and returns
 

@@ -12,3 +12,5 @@ class JsonFormatter(logging.Formatter):
 def configure_logging() -> None:
     handler = logging.StreamHandler(sys.stdout); handler.setFormatter(JsonFormatter())
     root = logging.getLogger(); root.handlers = [handler]; root.setLevel(logging.INFO)
+    # Third-party request logs can include full URLs and sensitive query values.
+    logging.getLogger("httpx").setLevel(logging.WARNING)

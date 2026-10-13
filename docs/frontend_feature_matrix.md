@@ -5,9 +5,9 @@ This matrix records the new `web/` client against the existing FastAPI backend. 
 | Area | API used | New client | Remaining verification/work |
 |---|---|---|---|
 | Catalog search and detail | `GET /search/books`, `GET /books/{id}` | Kiosk search, detail, pagination | Live browser search and tablet layout |
-| QR scanning | `POST /qr/verify-user`, `POST /qr/verify-book` | Native camera plugin; USB/manual fallback | Physical Android camera and permission check |
-| Borrow | `POST /borrowings` | Kiosk confirmation, receipt, duplicate-click guard | Real QR labels and concurrent tablets |
-| Return | `GET /borrowings/active/by-copy/{id}`, `POST /returns` | Kiosk confirmation and receipt | Real book return and fine outcome |
+| QR scanning | `POST /qr/verify-user`, `POST /qr/verify-book` | Native camera plugin; USB/manual fallback; one scan step at a time | Physical Android camera and permission check |
+| Borrow | `POST /borrowings` | Sequential ID, book, review, receipt flow and duplicate-click guard | Real QR labels and concurrent tablets |
+| Return | `GET /borrowings/active/by-copy/{id}`, `POST /returns` | Sequential book, review, receipt flow | Real book return and fine outcome |
 | Account | `GET /borrowings`, `/reservations`, `/notifications`, `/fines` | Session-only account view | Tablet privacy and expired grant behavior |
 | Renewal and reservation | `POST /borrowings/{id}/renew`, `POST/DELETE /reservations` | Account renewal/cancellation; detail reservation | Full policy conflict cases |
 | Discovery and assistant | `POST /ai/recommend`, `/ai/search`, `/ai/feedback` | Recommended/popular/new and assistant | Voice mode not migrated |

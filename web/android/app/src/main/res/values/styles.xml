@@ -17,6 +17,8 @@
 
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="android:background">#f8fbfa</item>
+        <item name="windowSplashScreenBackground">#f8fbfa</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/librai_symbol</item>
     </style>
 </resources>

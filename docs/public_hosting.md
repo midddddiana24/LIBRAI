@@ -2,6 +2,15 @@
 
 The Android kiosk and browser admin need one public HTTPS API. This repository has a production candidate at [`render.production.yaml`](../render.production.yaml). It creates a paid FastAPI web service, paid PostgreSQL, a persistent disk for covers, photos and reports, and a static site for the React admin UI. It has **not been deployed**. The existing [`render.yaml`](../render.yaml) remains a free demo setup with local SQLite; do not use it for library records.
 
+## Current public URLs (checked 2026-10-13)
+
+- API: `https://librai-api-zjic.onrender.com` returned HTTP 200 from `/health` with `database: connected`. Its public OpenAPI route list matched the local 50-path snapshot. This does not establish which database or disk the live service uses.
+- Kiosk: `https://librai-kiosk-zjic.onrender.com` serves the older Flet web app, including at `/admin`. It is not the new React admin site.
+- Preflight requests from `https://localhost` to the API's QR endpoint returned HTTP 400 without an `Access-Control-Allow-Origin` header. The Android React app cannot call this API until the API service's **live** `CORS_ORIGINS` includes `https://localhost`. For the existing Flet web hostname, include `https://librai-kiosk-zjic.onrender.com` as well. Set `CORS_ORIGINS=https://localhost,https://librai-kiosk-zjic.onrender.com` in Render's API environment settings and redeploy, then repeat the preflight check. The repository's demo `render.yaml` now contains these values, but changing the file locally does not alter the running service.
+- A debug Android APK has been compiled with `VITE_API_BASE_URL=https://librai-api-zjic.onrender.com/api/v1`. It is a **pilot build only** until CORS, real-camera behavior, and data persistence are verified.
+
+An earlier live recheck accepted `https://librai-kiosk.onrender.com` but rejected the Android origin. After the API redeployed, an OPTIONS request from `https://localhost` returned HTTP 200 with `Access-Control-Allow-Origin: https://localhost` at 09:21 UTC on 2026-10-13. A subsequent check from this workspace failed DNS resolution, so the current live response should be checked again before the tablet pilot. The pasted deploy log confirms that this service used SQLite and ran the initial migrations on that deploy. Do not use this database for real library records: a Render free web service's local SQLite database is lost on restart or redeploy.
+
 ## Before creating services
 
 1. Review Render's current charges in its dashboard. The proposed web service, database and disk incur charges when created. The free web service loses uploaded files on restart, and free PostgreSQL expires after 30 days, so it cannot hold school records reliably.

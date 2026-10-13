@@ -47,7 +47,7 @@ class GeminiClient:
         request = {"contents": [{"role": "user", "parts": [{"text": prompt}]}], "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2}}
         for attempt in range(settings.gemini_retry_count + 1):
             try:
-                response = httpx.post(url, params={"key": settings.gemini_api_key}, json=request, timeout=settings.gemini_timeout_seconds)
+                response = httpx.post(url, headers={"x-goog-api-key": settings.gemini_api_key}, json=request, timeout=settings.gemini_timeout_seconds)
                 if response.status_code == 429 or response.status_code >= 500:
                     response.raise_for_status()
                 response.raise_for_status()
@@ -102,13 +102,13 @@ class GeminiClient:
         }
         url = GEMINI_ENDPOINT.format(model=settings.gemini_model)
         try:
-            response = httpx.post(url, params={"key": settings.gemini_api_key}, json=request, timeout=settings.gemini_timeout_seconds)
+            response = httpx.post(url, headers={"x-goog-api-key": settings.gemini_api_key}, json=request, timeout=settings.gemini_timeout_seconds)
             response.raise_for_status()
             parts = response.json()["candidates"][0]["content"]["parts"]
             text = " ".join(str(part.get("text", "")) for part in parts).strip()
             return text or None
         except httpx.HTTPStatusError as exc:
-            logger.warning("Gemini speech transcription unavailable: HTTP %s body=%s", exc.response.status_code, exc.response.text[:300])
+            logger.warning("Gemini speech transcription unavailable: HTTP %s", exc.response.status_code)
             return None
         except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
             logger.warning("Gemini speech transcription unavailable: %s", type(exc).__name__)

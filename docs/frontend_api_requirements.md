@@ -83,7 +83,7 @@ The backend alone determines account eligibility, limits, availability, due date
 |---|---|---|---|
 | `POST /ai/search` | `{query,user_id?,user_verification_token?}` | `{answer,query,books:[book + why_match?]}` | LIBRAI Assistant |
 | `POST /ai/recommend` | `{user_id?,kind,user_verification_token?}` | Array of catalog books | Recommended/popular |
-| `POST /speech/transcribe` | Multipart audio or documented media payload | `{text}` | Future microphone adapter |
+| `POST /speech/transcribe` | Multipart audio file | `{text}` | Existing Flet microphone flow; React kiosk microphone integration remains to be built |
 
 AI book results must reference only real database records and include availability and shelf location. Gemini keys remain server-side.
 

@@ -8,7 +8,7 @@ This is the release checklist. Keep the current Flet client usable until the rep
 
 ## Current implementation status
 
-The first React/TypeScript client and Capacitor Android project are in `web/`. The API snapshot is in `docs/openapi.json`, and `docs/frontend_feature_matrix.md` lists migrated and remaining workflows. The backend suite passes 23 tests. TypeScript build and lint pass. Android debug compilation passed, and a browser-to-API borrow/return smoke test passed with isolated local data. Physical-device validation remains open. The public hosting candidate and deployment instructions are in `render.production.yaml` and `docs/public_hosting.md`; no production server or database was changed.
+The first React/TypeScript client and Capacitor Android project are in `web/`. The kiosk now emphasizes Borrow and Return, guides one transaction step at a time, and warns before clearing a private session. The API snapshot is in `docs/openapi.json`, and `docs/frontend_feature_matrix.md` lists migrated and remaining workflows. The backend suite passes 23 tests. TypeScript build and lint pass. Android debug compilation passed, and a browser-to-API borrow/return and timeout smoke test passed with isolated local data. Physical-device validation remains open. The public hosting candidate and deployment instructions are in `render.production.yaml` and `docs/public_hosting.md`; no production server or database was changed.
 
 ## 1. Confirm the deployment target
 

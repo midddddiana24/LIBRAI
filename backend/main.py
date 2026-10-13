@@ -34,7 +34,12 @@ async def security_and_logging(request:Request,call_next):
     try:too_large=bool(content_length and int(content_length)>settings.max_upload_bytes)
     except ValueError:too_large=False
     if too_large:return JSONResponse(status_code=413,content={"detail":"Request body is too large."})
-    response=await call_next(request);logger.info("request method=%s path=%s status=%s duration_ms=%.1f",request.method,request.url.path,response.status_code,(time.perf_counter()-start)*1000);return response
+    response=await call_next(request)
+    # Route templates hide ticket/QR values embedded in URL paths from logs.
+    route=request.scope.get("route")
+    route_path=getattr(route,"path","<unmatched>")
+    logger.info("request method=%s path=%s status=%s duration_ms=%.1f",request.method,route_path,response.status_code,(time.perf_counter()-start)*1000)
+    return response
 
 @app.get("/health",tags=["System"])
 def health():

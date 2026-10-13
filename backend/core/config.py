@@ -20,7 +20,12 @@ class Settings(BaseSettings):
     gemini_timeout_seconds: float = 12.0
     gemini_retry_count: int = 1
     gemini_cache_seconds: int = 300
-    cors_origins: list[str] | str = ["http://127.0.0.1:8550", "http://localhost:8550"]
+    cors_origins: list[str] | str = [
+        "http://127.0.0.1:8550", "http://localhost:8550",
+        "http://127.0.0.1:5173", "http://localhost:5173",
+        "http://127.0.0.1:4173", "http://localhost:4173",
+        "https://localhost",  # Capacitor Android local web origin.
+    ]
     report_directory: Path = Path("generated/reports")
     max_upload_bytes: int = 5 * 1024 * 1024
     rate_limit_window_seconds: int = 60
@@ -41,6 +46,14 @@ class Settings(BaseSettings):
     @classmethod
     def alias_environment(cls, value):
         return value or "development"
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def use_psycopg_for_postgres(cls, value):
+        # Render supplies postgresql://; SQLAlchemy otherwise looks for psycopg2.
+        if isinstance(value, str) and value.startswith("postgresql://"):
+            return "postgresql+psycopg://" + value.removeprefix("postgresql://")
+        return value
 
     @field_validator("cors_origins", mode="before")
     @classmethod

@@ -5,11 +5,22 @@ The Android kiosk and browser admin need one public HTTPS API. This repository h
 ## Current public URLs (checked 2026-10-13)
 
 - API: `https://librai-api-zjic.onrender.com` returned HTTP 200 from `/health` with `database: connected`. Its public OpenAPI route list matched the local 50-path snapshot. This does not establish which database or disk the live service uses.
-- Kiosk: `https://librai-kiosk-zjic.onrender.com` serves the older Flet web app, including at `/admin`. It is not the new React admin site.
-- Preflight requests from `https://localhost` to the API's QR endpoint returned HTTP 400 without an `Access-Control-Allow-Origin` header. The Android React app cannot call this API until the API service's **live** `CORS_ORIGINS` includes `https://localhost`. For the existing Flet web hostname, include `https://librai-kiosk-zjic.onrender.com` as well. Set `CORS_ORIGINS=https://localhost,https://librai-kiosk-zjic.onrender.com` in Render's API environment settings and redeploy, then repeat the preflight check. The repository's demo `render.yaml` now contains these values, but changing the file locally does not alter the running service.
+- Kiosk: `https://librai-kiosk-zjic.onrender.com` was configured to serve the older Flet web app, including at `/admin`. The local [`render.yaml`](../render.yaml) now builds the React kiosk and admin client for that same service name, but the live service will stay on Flet until these changes are committed, pushed, and deployed.
+- Preflight requests from `https://localhost` to the API's QR endpoint initially returned HTTP 400 without an `Access-Control-Allow-Origin` header. The API's **live** `CORS_ORIGINS` must include both `https://localhost` for Android and `https://librai-kiosk-zjic.onrender.com` for the browser site. The user reported updating and redeploying this setting; recheck it after the React site deploys.
 - A debug Android APK has been compiled with `VITE_API_BASE_URL=https://librai-api-zjic.onrender.com/api/v1`. It is a **pilot build only** until CORS, real-camera behavior, and data persistence are verified.
 
 An earlier live recheck accepted `https://librai-kiosk.onrender.com` but rejected the Android origin. After the API redeployed, an OPTIONS request from `https://localhost` returned HTTP 200 with `Access-Control-Allow-Origin: https://localhost` at 09:21 UTC on 2026-10-13. A subsequent check from this workspace failed DNS resolution, so the current live response should be checked again before the tablet pilot. The pasted deploy log confirms that this service used SQLite and ran the initial migrations on that deploy. Do not use this database for real library records: a Render free web service's local SQLite database is lost on restart or redeploy.
+
+## Show the React design at the existing kiosk URL
+
+The free demo [`render.yaml`](../render.yaml) now defines `librai-kiosk` as a Node web service. It runs `cd web && npm ci && npm run build`, then `node web/server.mjs`. The server serves `/` as the kiosk and `/admin` as the admin client. `VITE_API_BASE_URL` is set to `https://librai-api-zjic.onrender.com/api/v1` during the build; this is a public browser value, not a secret.
+
+1. Commit and push the React files, `web/server.mjs`, and `render.yaml` to the branch connected to Render. Local edits and local APK builds do not update the website.
+2. In Render, open the existing **librai-kiosk** service. If it is managed by a Blueprint, sync that Blueprint and check that the runtime changes from Python to Node. Otherwise, open **Settings > Build > Source > Edit**, choose Node, and set the build and start commands above. Set `VITE_API_BASE_URL` to the API URL in **Environment** and deploy. Render supports changing an existing native service's runtime; confirm the actual service configuration before deploying.
+3. After a successful deploy, open `https://librai-kiosk-zjic.onrender.com/` in a private browser window. It should show “What would you like to do today?” and the Borrow/Return cards. Open `/admin` and confirm the React staff login appears. If the old Flet page remains, inspect which branch, commit, runtime, build command, and start command the live service actually used.
+4. Test a browser API request from the new site. If the browser reports CORS, confirm the API's live `CORS_ORIGINS` contains the exact kiosk origin and redeploy the API.
+
+Render references: [changing native runtimes](https://render.com/docs/native-runtimes#changing-a-services-runtime), [Blueprint service fields](https://render.com/docs/blueprint-spec), and [deploy settings](https://render.com/docs/deploys).
 
 ## Before creating services
 
@@ -33,10 +44,10 @@ The hosted Uvicorn process disables raw access logs, and the application logs ro
 
 ## Build the Android app against the live API
 
-From `web/`, set `VITE_API_BASE_URL=https://<actual-api-host>/api/v1` and run `npm run android:sync`, then build the debug APK from `web/android` with `./gradlew.bat assembleDebug`. Install it on the target tablet and test camera scanning over both school Wi-Fi and another internet connection. For routine distribution, create a signed release build and keep the signing key outside the repository. The existing debug APK was compiled before a production URL was known and is not a deployable kiosk release.
+From `web/`, set `VITE_API_BASE_URL=https://<actual-api-host>/api/v1` and run `npm run android:sync`, then build the debug APK from `web/android` with `./gradlew.bat assembleDebug`. Install it on the target tablet and test camera scanning over both school Wi-Fi and another internet connection. For routine distribution, create a signed release build and keep the signing key outside the repository. The current debug APK includes the known Render API URL, but it is still a pilot build until physical camera and persistence checks pass.
 
 ## Current limits
 
-This hosting file is a reviewed starting point, not a verified deployment. The repo is not connected to a Render account here, so no public service, database, TLS hostname, backups, or physical-tablet test has been completed. The feature matrix in [`frontend_feature_matrix.md`](frontend_feature_matrix.md) lists UI work still needed before replacing the Flet client. Persistent disks also mean the API cannot scale to multiple Render instances without moving media to shared object storage.
+The React deployment change is prepared locally, not verified on the live Render service. This workspace has no connected Render account, so its current runtime, branch, deployment status, data persistence, and backups cannot be confirmed here. The feature matrix in [`frontend_feature_matrix.md`](frontend_feature_matrix.md) lists remaining UI work. Persistent disks also mean the API cannot scale to multiple Render instances without moving media to shared object storage.
 
 Render reference: [Blueprint fields](https://render.com/docs/blueprint-spec), [persistent disks](https://render.com/docs/disks), [free tier limits](https://render.com/docs/free), and [compute plans](https://render.com/docs/compute-plans).

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { LoaderCircle } from 'lucide-react'
 import { ApiError, api, bookDetail, books, health, mediaUrl, verifyBook, verifyUser } from './api'
 import type { ActiveBorrowing, Book, BookGrant, BorrowReceipt, Page, ReturnReceipt, UserGrant } from './api'
 import { QrCapture } from './QrCapture'
@@ -159,7 +160,8 @@ export default function KioskApp() {
 
   return <div className="app kiosk">
     <header className="topbar"><div className="brand"><img className="brand-mark" src="/images/librai-symbol.png" alt="" /><span><strong>LIBRAI</strong><small>Library kiosk</small></span></div><div className="top-actions"><span className={`status ${online ? 'good' : 'bad'}`}>{online === null ? 'Connecting' : online ? 'Library online' : 'Library offline'}</span><button type="button" onClick={endSession}>End session</button></div></header>
-    <main className="content">
+    {busy && <div className="kiosk-activity" role="status" aria-live="polite"><LoaderCircle className="loading-spinner" aria-hidden="true" /><span>Working with the library…</span></div>}
+    <main className="content" aria-busy={busy}>
       {online === false && <div className="connection-banner" role="alert"><div><strong>Library connection lost</strong><span>Borrowing, returns, and catalog updates need the server. Check the tablet connection.</span></div><button onClick={() => void health().then(setOnline)}>Try again</button></div>}
       {privateSession && secondsLeft <= 15 && <div className="session-warning" role="status"><strong>This session will clear in {secondsLeft} seconds.</strong><span>Touch the screen to keep working, or select End session to clear your information now.</span></div>}
       {error && <div className="alert error" role="alert">{error}</div>}

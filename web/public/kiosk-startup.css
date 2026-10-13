@@ -1,5 +1,5 @@
 .startup-screen{min-height:100vh;min-height:100svh;display:grid;place-items:center;background:#f8fbfa;color:#163b3b;text-align:center;padding:24px;font-family:Arial,Helvetica,sans-serif}
-.startup-content{width:min(100%,410px)}
+.startup-content{width:min(100%,410px);animation:kiosk-startup-enter .45s ease-out both}
 .startup-symbol{width:76px;height:76px;margin:0 auto 27px}
 .startup-symbol img{display:block;width:100%;height:100%;object-fit:contain}
 .startup-kicker{margin:0 0 15px;color:#08635e;font-size:11px;font-weight:800;letter-spacing:.15em}
@@ -8,4 +8,5 @@
 .startup-track{width:134px;height:3px;margin:27px auto 0;background:#d8e6e2;overflow:hidden;border-radius:4px}
 .startup-track span{display:block;width:38%;height:100%;background:#08635e;border-radius:4px;animation:kiosk-loading 1.2s ease-in-out infinite alternate}
 @keyframes kiosk-loading{to{transform:translateX(163%)}}
-@media(prefers-reduced-motion:reduce){.startup-track span{animation:none;width:100%}}
+@keyframes kiosk-startup-enter{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.startup-content,.startup-track span{animation:none}.startup-track span{width:100%}}

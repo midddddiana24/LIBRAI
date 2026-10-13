@@ -52,6 +52,23 @@ html,body{overflow-x:clip}
 .kiosk .transaction-progress li.current span,.kiosk .transaction-progress li.done span{background:var(--kiosk-accent)}
 .kiosk .step-kicker,.kiosk .transaction-card .text-button{color:var(--kiosk-accent)}
 .kiosk .connection-banner,.kiosk .session-warning{border-radius:10px}
+.kiosk-activity{display:flex;align-items:center;justify-content:center;gap:9px;min-height:37px;background:#eaf4f0;border-bottom:1px solid var(--kiosk-rule);color:var(--kiosk-accent);font-size:.81rem;font-weight:700}
+.kiosk .icon-button{display:inline-flex;align-items:center;justify-content:center;gap:9px}
+.kiosk .icon-button svg,.kiosk-activity svg{width:19px;height:19px;flex:none;stroke-width:2}
+.kiosk .loading-spinner,.kiosk-activity .loading-spinner{animation:kiosk-spin .85s linear infinite}
+@keyframes kiosk-spin{to{transform:rotate(360deg)}}
+.kiosk .kiosk-task-link{display:inline-flex;align-items:center;gap:5px}
+.kiosk .kiosk-task-link svg{width:16px;height:16px;transition:transform .18s ease}
+.kiosk .kiosk-task:hover:not(:disabled) .kiosk-task-link svg{transform:translateX(4px)}
+.kiosk .kiosk-task-icon{transition:background-color .18s ease,transform .18s ease}
+.kiosk .kiosk-task:hover:not(:disabled) .kiosk-task-icon{background:#d8eee8;transform:scale(1.04)}
+.kiosk .kiosk-quick-links button{display:inline-flex;align-items:center;justify-content:center;gap:7px;text-align:center}
+.kiosk .kiosk-quick-links button svg{width:17px;height:17px;flex:none;stroke-width:1.9}
+.kiosk-home{animation:kiosk-enter .38s ease both}
+@keyframes kiosk-enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.kiosk .page-heading h1,.kiosk .review-list strong,.kiosk .book-card strong{overflow-wrap:anywhere}
+.kiosk .facts{flex-wrap:wrap}
+.kiosk .pagination{flex-wrap:wrap;padding:20px 0}
 @media(max-width:700px){
   .kiosk .topbar{display:flex;justify-content:space-between;gap:8px;height:auto;min-height:74px;padding:10px 18px;align-items:center}
   .kiosk .brand{gap:7px}.kiosk .brand-mark{width:34px;height:34px}.kiosk .brand strong{font-size:.86rem}.kiosk .brand small{font-size:.62rem}
@@ -65,6 +82,16 @@ html,body{overflow-x:clip}
   .kiosk-explore{padding-top:20px}.kiosk-quick-links{gap:5px 18px}
   .kiosk footer{margin:0 20px}
 }
+@media(max-width:600px){
+  .kiosk-task-grid{grid-template-columns:minmax(0,1fr);max-width:360px}
+  .kiosk .kiosk-task{min-height:192px;padding:18px 20px}
+  .kiosk-task-icon{width:53px;height:53px;margin-bottom:12px}.kiosk-task-icon svg{width:31px;height:31px}
+  .kiosk-task-description{margin:8px 0 12px}
+  .kiosk .page-heading{flex-direction:column;align-items:stretch;gap:12px}
+  .kiosk .page-heading>button{align-self:flex-start}
+  .kiosk .account-sections .list>div{align-items:flex-start;flex-direction:column}
+  .kiosk .tabs{flex-direction:row;flex-wrap:wrap}
+}
 @media(max-width:420px){
   .kiosk .top-actions .status{display:none}
   .kiosk-task-grid{grid-template-columns:minmax(0,1fr);max-width:310px}
@@ -73,4 +100,4 @@ html,body{overflow-x:clip}
   .kiosk-task-description{margin:6px 0 10px}
   .kiosk-search>div{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}.kiosk-search input{width:100%;font-size:.88rem;padding:10px}.kiosk .kiosk-search .primary{width:100%;padding:10px;font-size:.82rem}
 }
-@media(prefers-reduced-motion:reduce){.kiosk .kiosk-task{transition:none}.kiosk .kiosk-task:hover:not(:disabled),.kiosk .kiosk-task:active:not(:disabled){transform:none}}
+@media(prefers-reduced-motion:reduce){.kiosk-home,.kiosk .loading-spinner,.kiosk-activity .loading-spinner{animation:none}.kiosk .kiosk-task,.kiosk .kiosk-task-icon,.kiosk .kiosk-task-link svg{transition:none}.kiosk .kiosk-task:hover:not(:disabled),.kiosk .kiosk-task:active:not(:disabled),.kiosk .kiosk-task:hover:not(:disabled) .kiosk-task-icon,.kiosk .kiosk-task:hover:not(:disabled) .kiosk-task-link svg{transform:none}}

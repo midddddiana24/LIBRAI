@@ -24,16 +24,12 @@ services:
 
   - type: web
     name: librai-kiosk
-    runtime: python
+    runtime: node
     plan: free
-    buildCommand: pip install -r frontend/requirements.txt
-    startCommand: flet run --web --host 0.0.0.0 --port $PORT frontend/app.py
+    buildCommand: cd web && npm ci && npm run build
+    startCommand: node web/server.mjs
     envVars:
-      - key: LIBRAI_API_BASE_URL
+      - key: NODE_VERSION
+        value: 22
+      - key: VITE_API_BASE_URL
         value: https://librai-api-zjic.onrender.com/api/v1
-      - key: LIBRAI_USE_MOCK_FALLBACK
-        value: "false"
-      - key: LIBRAI_DEFAULT_MODE
-        value: kiosk
-      - key: FLET_SECRET_KEY
-        generateValue: true

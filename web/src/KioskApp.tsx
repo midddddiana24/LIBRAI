@@ -173,7 +173,7 @@ export default function KioskApp() {
     if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) { setVoiceNotice('Read aloud is unavailable on this device.'); return }
     window.speechSynthesis.cancel()
     const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'en-US'
+    utterance.lang = /\b(manghiram|humiram|ibalik|libro|aklat|hanap|pahiram)\b/i.test(text) ? 'fil-PH' : 'en-US'
     utterance.rate = 0.94
     utterance.onstart = () => setSpeaking(true)
     utterance.onend = () => setSpeaking(false)

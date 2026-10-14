@@ -95,14 +95,14 @@ class GeminiClient:
             return None
         request = {
             "contents": [{"role": "user", "parts": [
-                {"text": "Transcribe this library user's speech exactly. Return only the spoken words, with no quotation marks or explanation."},
+                {"text": "Transcribe the user's speech verbatim in its original language (English, Filipino, or both). Do not translate, infer a command, or add words. Return only the spoken words, with no quotation marks or explanation."},
                 {"inlineData": {"mimeType": mime_type, "data": base64.b64encode(audio).decode("ascii")}},
             ]}],
             "generationConfig": {"temperature": 0.0},
         }
         url = GEMINI_ENDPOINT.format(model=settings.gemini_model)
         try:
-            response = httpx.post(url, headers={"x-goog-api-key": settings.gemini_api_key}, json=request, timeout=settings.gemini_timeout_seconds)
+            response = httpx.post(url, headers={"x-goog-api-key": settings.gemini_api_key}, json=request, timeout=settings.gemini_speech_timeout_seconds)
             response.raise_for_status()
             parts = response.json()["candidates"][0]["content"]["parts"]
             text = " ".join(str(part.get("text", "")) for part in parts).strip()

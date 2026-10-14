@@ -86,7 +86,7 @@ export default function VoiceControl({ label, disabled = false, confirmBeforeUse
           if (audible === false) { setMessage('No clear sound was recorded. Move closer to the microphone and try again.'); return }
           const form = new FormData()
           form.append('audio', blob, type === 'audio/m4a' ? 'speech.m4a' : type === 'audio/ogg' ? 'speech.ogg' : 'speech.webm')
-          const result = await api<{ text: string }>('/speech/transcribe', { method: 'POST', body: form }, undefined, 45_000)
+          const result = await api<{ text: string }>('/speech/transcribe', { method: 'POST', body: form }, undefined, 55_000)
           if (!mountedRef.current) return
           const text = result.text.trim()
           if (!text) { setMessage('No words were detected. Please try again.'); return }

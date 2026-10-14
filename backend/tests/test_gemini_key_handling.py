@@ -32,6 +32,7 @@ def test_gemini_requests_send_key_in_header(monkeypatch):
         gemini_model="test-model",
         gemini_retry_count=0,
         gemini_timeout_seconds=5,
+        gemini_speech_timeout_seconds=40,
         gemini_cache_seconds=30,
         tokenrouter_api_key=None,
     ))
@@ -47,4 +48,6 @@ def test_gemini_requests_send_key_in_header(monkeypatch):
         assert secret not in url
         assert kwargs["headers"]["x-goog-api-key"] == secret
         assert "params" not in kwargs
+    assert requests[1][1]["timeout"] == 40
+    assert "Filipino" in requests[1][1]["json"]["contents"][0]["parts"][0]["text"]
     assert logging.getLogger("httpx").getEffectiveLevel() >= logging.WARNING

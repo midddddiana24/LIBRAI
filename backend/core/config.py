@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     tokenrouter_model: str = "z-ai/glm-5.3-free"
     tokenrouter_base_url: str = "https://api.tokenrouter.com/v1"
     gemini_timeout_seconds: float = 12.0
+    gemini_speech_timeout_seconds: float = 40.0
     gemini_retry_count: int = 1
     gemini_cache_seconds: int = 300
     cors_origins: list[str] | str = [

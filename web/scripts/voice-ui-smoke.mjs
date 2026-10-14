@@ -36,7 +36,9 @@ try {
   })
   let transcriptions = 0
   let borrowingPosts = 0
-  await page.route('http://127.0.0.1:8000/**', async route => {
+  // The same UI is built for localhost in development and HTTPS in the APK.
+  // Intercept API paths regardless of the compiled origin.
+  await page.route(/\/health$|\/api\/v1\//, async route => {
     const request = route.request()
     const path = new URL(request.url()).pathname
     if (path === '/health') return route.fulfill({ json: { status: 'ok' } })

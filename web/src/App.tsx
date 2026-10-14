@@ -5,7 +5,8 @@ const KioskApp = lazy(() => import('./KioskApp'))
 const AdminApp = lazy(() => import('./AdminApp'))
 
 export default function App() {
-  return <Suspense fallback={<StartupScreen />}>
-    {window.location.pathname.startsWith('/admin') ? <AdminApp /> : <KioskApp />}
+  const adminRoute = window.location.pathname.startsWith('/admin')
+  return <Suspense fallback={<StartupScreen mode={adminRoute ? 'admin' : 'kiosk'} />}>
+    {adminRoute ? <AdminApp /> : <KioskApp />}
   </Suspense>
 }

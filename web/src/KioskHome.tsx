@@ -1,4 +1,5 @@
-import { ArrowRight, BookOpen, LibraryBig, LoaderCircle, MessageCircle, RotateCcw, Search, Sparkles, UserRound } from 'lucide-react'
+import { ArrowRight, LoaderCircle, Search } from 'lucide-react'
+import LibraryActionIcon from './LibraryActionIcon'
 import VoiceControl from './VoiceControl'
 
 type Props = {
@@ -21,20 +22,20 @@ export default function KioskHome({ query, busy, online, onQuery, onSearch, onBo
 
   return <div className="kiosk-home">
     <section className="kiosk-intro" aria-labelledby="kiosk-intro-title">
-      <p className="eyebrow">LIBRAI · Library self service</p>
-      <h1 id="kiosk-intro-title">What would you like to do today?</h1>
-      <p>Choose an option to begin. Your librarian can help if you need it.</p>
+      <p className="eyebrow">Your library, one tap away</p>
+      <h1 id="kiosk-intro-title">Welcome to the library.</h1>
+      <p>Borrow or return a book, then explore everything on the shelves.</p>
     </section>
 
     <section className="kiosk-task-grid" aria-label="Borrow or return">
       <button className="kiosk-task" disabled={unavailable} onClick={onBorrow}>
-        <span className="kiosk-task-icon" aria-hidden="true"><BookOpen /></span>
+        <span className="kiosk-task-icon" aria-hidden="true"><LibraryActionIcon kind="borrow" /></span>
         <strong>Borrow a book</strong>
         <span className="kiosk-task-description">Scan your library ID and the book’s QR code.</span>
         <span className="kiosk-task-link">Start borrowing <ArrowRight aria-hidden="true" /></span>
       </button>
       <button className="kiosk-task" disabled={unavailable} onClick={onReturn}>
-        <span className="kiosk-task-icon" aria-hidden="true"><RotateCcw /></span>
+        <span className="kiosk-task-icon" aria-hidden="true"><LibraryActionIcon kind="return" /></span>
         <strong>Return a book</strong>
         <span className="kiosk-task-description">Scan the QR code on the borrowed book.</span>
         <span className="kiosk-task-link">Start returning <ArrowRight aria-hidden="true" /></span>
@@ -48,10 +49,10 @@ export default function KioskHome({ query, busy, online, onQuery, onSearch, onBo
         <div><input id="kiosk-home-search" value={query} onChange={event => onQuery(event.target.value)} placeholder="Search by title, author, or topic" /><button className="primary icon-button" disabled={unavailable}>{busy ? <LoaderCircle className="loading-spinner" aria-hidden="true" /> : <Search aria-hidden="true" />}<span>{busy ? 'Loading…' : 'Search'}</span></button></div>
       </form>
       <div className="kiosk-quick-links">
-        <button disabled={unavailable} onClick={() => onSearch('')}><LibraryBig aria-hidden="true" />Browse catalog</button>
-        <button disabled={unavailable} onClick={onAccount}><UserRound aria-hidden="true" />My account</button>
-        <button disabled={unavailable} onClick={onDiscover}><Sparkles aria-hidden="true" />Discover books</button>
-        <button disabled={unavailable} onClick={onAssistant}><MessageCircle aria-hidden="true" />Ask LIBRAI</button>
+        <button disabled={unavailable} onClick={() => onSearch('')}><LibraryActionIcon kind="catalog" />Browse catalog</button>
+        <button disabled={unavailable} onClick={onAccount}><LibraryActionIcon kind="account" />My account</button>
+        <button disabled={unavailable} onClick={onDiscover}><LibraryActionIcon kind="discover" />Discover books</button>
+        <button disabled={unavailable} onClick={onAssistant}><LibraryActionIcon kind="assistant" />Ask LIBRAI</button>
       </div>
     </section>
   </div>

@@ -37,6 +37,9 @@ services:
     staticPublishPath: web/dist
     routes:
       - type: rewrite
+        source: /admin
+        destination: /index.html
+      - type: rewrite
         source: /admin/*
         destination: /index.html
     envVars:

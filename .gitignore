@@ -6,6 +6,8 @@ backups/
 .flet/
 .pytest_cache/
 *.db
+*.db-wal
+*.db-shm
 *.sqlite3
 generated/
 .coverage

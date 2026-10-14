@@ -39,7 +39,7 @@ export default function KioskHome({ query, busy, online, onQuery, onSearch, onBo
           <span className="kiosk-task-icon"><KioskTileArt kind="return" /></span>
           <strong>Return a book</strong>
         </button>
-        <button className="kiosk-task kiosk-task-find" type="button" aria-label="Find a book" disabled={unavailable} onClick={() => onSearch('')}>
+        <button className="kiosk-task kiosk-task-find" type="button" aria-label="Find a book" disabled={unavailable} onClick={() => onSearch(query)}>
           <span className="kiosk-task-icon"><KioskTileArt kind="find" /></span>
           <strong>Find a book</strong>
         </button>

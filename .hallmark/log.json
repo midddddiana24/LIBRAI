@@ -5,5 +5,12 @@
     "theme": "Quiet",
     "enrichment": "none",
     "brief": "Refresh the library kiosk and staff workspace with distinct task icons and clear interaction feedback"
+  },
+  {
+    "date": "2026-10-14",
+    "macrostructure": "framed tablet menu with four large service tiles",
+    "theme": "Quiet",
+    "enrichment": "original SVG book illustrations",
+    "brief": "Adapt the supplied kiosk reference for borrow, return, find, and discovery while keeping voice and account access"
   }
 ]

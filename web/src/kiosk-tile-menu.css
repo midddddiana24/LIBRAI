@@ -1,0 +1,199 @@
+/* The home menu follows the reference's generous 2x2 touch grid and quiet frame. */
+.kiosk .content:has(.kiosk-menu) {
+  max-width: 1020px;
+  padding: clamp(20px, 3vw, 34px) clamp(14px, 3vw, 32px) 40px;
+}
+
+.kiosk-menu {
+  --menu-ink: #222b2b;
+  --menu-muted: #536064;
+  --menu-backdrop: #c6d7f4;
+  --menu-tile: #f0f2f2;
+  --menu-rule: #dbe1e1;
+  color: var(--menu-ink);
+  padding: clamp(10px, 2vw, 20px);
+  border-radius: clamp(28px, 5vw, 46px);
+  background: var(--menu-backdrop);
+}
+
+.kiosk-menu-screen {
+  max-width: 800px;
+  margin: auto;
+  padding: clamp(18px, 3.8vw, 38px);
+  border: 5px solid #242a2a;
+  border-radius: clamp(24px, 4vw, 36px);
+  background: #fff;
+  box-shadow: 0 16px 32px rgb(44 58 74 / 11%);
+}
+
+.kiosk-menu-utility {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--menu-muted);
+  font-size: .83rem;
+  font-weight: 700;
+}
+
+.kiosk-menu-utility button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 8px 13px;
+  color: var(--menu-ink);
+  border-color: var(--menu-rule);
+  border-radius: 10px;
+  background: var(--menu-tile);
+  font-size: .79rem;
+}
+
+.kiosk-menu-utility button svg { width: 17px; height: 17px; }
+.kiosk-menu-utility button:hover:not(:disabled) { background: #e2e9f4; }
+
+.kiosk-menu .kiosk-intro {
+  max-width: 560px;
+  margin: clamp(28px, 5vw, 52px) auto clamp(20px, 3vw, 30px);
+  padding: 0;
+  border: 0;
+  text-align: center;
+}
+
+.kiosk-menu .kiosk-intro .eyebrow {
+  color: #406675;
+  letter-spacing: .10em;
+  font-size: .7rem;
+}
+
+.kiosk-menu .kiosk-intro h1 {
+  max-width: none;
+  margin: 10px auto 8px;
+  font-size: clamp(1.7rem, 4.2vw, 2.65rem);
+  line-height: 1.15;
+  letter-spacing: -.035em;
+  font-weight: 730;
+}
+
+.kiosk-menu .kiosk-intro > p:last-child {
+  margin: 0;
+  color: var(--menu-muted);
+  font-size: .93rem;
+}
+
+.kiosk-menu .kiosk-task-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(10px, 2vw, 18px);
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+.kiosk-menu .kiosk-task {
+  --tile-ink: #354042;
+  --tile-paper: #fffdf5;
+  --tile-accent: #d8e8f4;
+  --tile-pop: #f1b982;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: clamp(180px, 29vw, 230px);
+  padding: 14px 10px;
+  border: 2px solid transparent;
+  border-radius: 15px;
+  background: var(--menu-tile);
+  box-shadow: none;
+  color: var(--menu-ink);
+  text-align: center;
+  touch-action: manipulation;
+}
+
+.kiosk-menu .kiosk-task-return { --tile-accent: #d5ebdf; --tile-pop: #efc78a; }
+.kiosk-menu .kiosk-task-find { --tile-accent: #f1c59d; --tile-pop: #dce4a8; }
+.kiosk-menu .kiosk-task-discover { --tile-accent: #c7d6f4; --tile-pop: #f4cc7f; }
+.kiosk-menu .kiosk-task:nth-child(2) { border-color: transparent; background: var(--menu-tile); color: var(--menu-ink); }
+
+.kiosk-menu .kiosk-task-icon,
+.kiosk-menu .kiosk-task:nth-child(2) .kiosk-task-icon {
+  display: grid;
+  place-items: center;
+  width: clamp(76px, 12vw, 116px);
+  height: clamp(76px, 12vw, 116px);
+  margin: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--menu-ink);
+}
+
+.kiosk-menu .kiosk-task-icon svg { width: 100%; height: 100%; }
+.kiosk-menu .kiosk-task strong { color: var(--menu-ink); font-size: clamp(.92rem, 1.75vw, 1.12rem); line-height: 1.2; letter-spacing: -.015em; }
+
+.kiosk-menu .kiosk-task:hover:not(:disabled),
+.kiosk-menu .kiosk-task:nth-child(2):hover:not(:disabled) {
+  transform: translateY(-3px);
+  border-color: #86a4cb;
+  background: #e7edf5;
+  box-shadow: 0 10px 20px rgb(42 63 85 / 12%);
+}
+
+.kiosk-menu .kiosk-task:hover:not(:disabled) .kiosk-task-icon,
+.kiosk-menu .kiosk-task:nth-child(2):hover:not(:disabled) .kiosk-task-icon { background: none; transform: scale(1.05); }
+.kiosk-menu .kiosk-task:active:not(:disabled) { transform: scale(.97); box-shadow: none; }
+.kiosk-menu .kiosk-task:focus-visible { outline: 3px solid #34689d; outline-offset: 3px; }
+
+.kiosk-menu .kiosk-explore {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  max-width: 650px;
+  margin: clamp(26px, 4vw, 36px) auto 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--menu-rule);
+}
+
+.kiosk-menu .kiosk-search,
+.kiosk-menu .kiosk-voice-entry {
+  padding: 15px;
+  border: 1px solid var(--menu-rule);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.kiosk-menu .kiosk-search { grid-column: 1 / -1; }
+.kiosk-menu .kiosk-search > div { margin-top: 8px; }
+.kiosk-menu .kiosk-voice-entry { grid-column: 1 / -1; }
+.kiosk-menu .kiosk-quick-links { grid-column: 1 / -1; }
+.kiosk-menu .kiosk-quick-links button { min-height: 52px; background: #f7f9fb; }
+
+@media (max-width: 620px) {
+  .kiosk .content:has(.kiosk-menu) { padding: 14px 8px 30px; }
+  .kiosk-menu { padding: 8px; border-radius: 30px; }
+  .kiosk-menu-screen { padding: 15px 13px 23px; border-width: 4px; border-radius: 25px; }
+  .kiosk-menu .kiosk-intro { margin: 28px auto 22px; }
+  .kiosk-menu .kiosk-task-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; }
+  .kiosk-menu .kiosk-task { min-height: 172px; padding: 12px 5px; gap: 7px; }
+  .kiosk-menu .kiosk-task strong { font-size: .9rem; }
+  .kiosk-menu .kiosk-task-icon { width: 86px; height: 86px; }
+  .kiosk-menu .kiosk-explore { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 360px) {
+  .kiosk-menu-utility > span { font-size: .72rem; }
+  .kiosk-menu-utility button { font-size: .72rem; padding-inline: 8px; }
+  .kiosk-menu .kiosk-intro h1 { font-size: 1.58rem; }
+  .kiosk-menu .kiosk-task { min-height: 154px; }
+  .kiosk-menu .kiosk-task-icon { width: 70px; height: 70px; }
+  .kiosk-menu .kiosk-task strong { font-size: .8rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kiosk-menu .kiosk-task,
+  .kiosk-menu .kiosk-task-icon { transition: none; }
+  .kiosk-menu .kiosk-task:hover:not(:disabled),
+  .kiosk-menu .kiosk-task:active:not(:disabled),
+  .kiosk-menu .kiosk-task:hover:not(:disabled) .kiosk-task-icon { transform: none; }
+}

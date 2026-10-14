@@ -4,6 +4,7 @@ import './index.css'
 import './kiosk-reference.css'
 import './voice.css'
 import './library-refresh.css'
+import './kiosk-tile-menu.css'
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(

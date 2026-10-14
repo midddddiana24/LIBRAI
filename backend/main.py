@@ -11,6 +11,7 @@ from backend.core.config import settings
 from backend.core.database import SessionLocal
 from backend.core.exceptions import install_exception_handlers
 from backend.core.logging import configure_logging
+from backend.services import object_storage
 
 configure_logging();logger=logging.getLogger(__name__)
 app=FastAPI(title="LIBRAI API",version="1.0.0",description="Authoritative library kiosk backend",docs_url="/docs",redoc_url="/redoc")
@@ -19,7 +20,15 @@ install_exception_handlers(app);app.include_router(api_router,prefix="/api/v1")
 __import__("pathlib").Path("generated/covers").mkdir(parents=True,exist_ok=True)
 # Only catalog covers are public. Reports, QR sheets and user photos live under
 # generated/ too, but must only be served by their signed download endpoints.
-app.mount("/files/covers",StaticFiles(directory="generated/covers"),name="book-covers")
+if object_storage.enabled():
+    from fastapi import HTTPException
+    @app.get("/files/covers/{filename}", include_in_schema=False)
+    def stored_cover(filename: str):
+        if not filename.endswith(".webp") or "/" in filename or ".." in filename:
+            raise HTTPException(404,"Book cover not found.")
+        return object_storage.media_response(f"generated/covers/{filename}",media_type="image/webp",headers={"Cache-Control":"public, max-age=300"})
+else:
+    app.mount("/files/covers",StaticFiles(directory="generated/covers"),name="book-covers")
 
 requests_by_ip:dict[str,deque]=defaultdict(deque)
 @app.middleware("http")

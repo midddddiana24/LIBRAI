@@ -1,0 +1,33 @@
+# New free API candidate. Keep the current librai-api service unchanged until
+# the local backup and media are imported and the new service is verified.
+services:
+  - type: web
+    name: librai-api-free-pg
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn backend.main:app --host 0.0.0.0 --port $PORT --no-access-log
+    healthCheckPath: /health
+    envVars:
+      - key: LIBRAI_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://localhost,https://librai-kiosk-zjic.onrender.com
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: TOKENROUTER_API_KEY
+        sync: false
+      - key: MEDIA_BUCKET
+        sync: false
+      - key: AWS_ENDPOINT_URL_S3
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false

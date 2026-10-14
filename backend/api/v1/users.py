@@ -1,5 +1,4 @@
 from fastapi import APIRouter,Depends,File,HTTPException,Query,UploadFile
-from fastapi.responses import FileResponse
 from sqlalchemy import func,or_,select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -12,14 +11,18 @@ from backend.services.audit_service import audit
 from backend.services.policy_service import borrowing_limit
 from backend.services.serialization import user_admin_dict
 from backend.services.media_service import private_user_photo_path,store_image
+from backend.services import object_storage
 
 router=APIRouter(prefix="/users",tags=["Users"])
 
-@router.get("/photo/{ticket}",response_class=FileResponse)
+@router.get("/photo/{ticket}")
 def user_photo(ticket:str,db:Session=Depends(get_db)):
     user_id=verify_user_photo_grant(ticket);user=db.get(User,user_id)
     if not user:raise HTTPException(404,"User not found.")
-    return FileResponse(private_user_photo_path(user.photo_image),media_type="image/webp",headers={"Cache-Control":"private, max-age=300"})
+    if not user.photo_image or not user.photo_image.startswith("private/users/") or ".." in user.photo_image.split("/"):
+        raise HTTPException(404,"User photo not found.")
+    path = f"generated/{user.photo_image}" if object_storage.enabled() else private_user_photo_path(user.photo_image)
+    return object_storage.media_response(path,media_type="image/webp",headers={"Cache-Control":"private, max-age=300"})
 @router.get("")
 def list_users(q:str|None=None,offset:int=Query(0,ge=0),limit:int=Query(50,ge=1,le=100),_admin:Admin=Depends(get_current_admin),db:Session=Depends(get_db)):
     stmt=select(User)

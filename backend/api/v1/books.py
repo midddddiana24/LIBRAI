@@ -14,6 +14,7 @@ from backend.services.audit_service import audit
 from backend.services.catalog_service import get_or_create_category,search_books
 from backend.services.serialization import book_dict
 from backend.services.media_service import store_image
+from backend.services import object_storage
 
 router=APIRouter(prefix="/books",tags=["Books"])
 @router.get("/export.csv")
@@ -106,7 +107,7 @@ def create_copy_qr_sheet(book_id:int,admin:Admin=Depends(get_current_admin),db:S
     if not book:raise HTTPException(404,"Book not found.")
     copies=list(db.scalars(select(BookCopy).where(BookCopy.book_id==book_id).order_by(BookCopy.accession_number)))
     if not copies:raise HTTPException(409,"Add at least one physical copy before generating a QR sheet.")
-    path=generate_book_qr_sheet(book,copies);job=ReportJob(admin_id=admin.id,report_type="book_qr_sheet",format="pdf",file_path=str(path));db.add(job);db.flush();audit(db,"BOOK_QR_SHEET_EXPORTED","book",book.id,admin=admin,details={"copy_count":len(copies),"report_job_id":job.id});db.commit();ticket=create_report_download_grant(job.id);return {"job_id":job.id,"copy_count":len(copies),"download_url":f"/api/v1/reports/public-download/{ticket}"}
+    path=generate_book_qr_sheet(book,copies);stored=object_storage.put_file(path);job=ReportJob(admin_id=admin.id,report_type="book_qr_sheet",format="pdf",file_path=stored);db.add(job);db.flush();audit(db,"BOOK_QR_SHEET_EXPORTED","book",book.id,admin=admin,details={"copy_count":len(copies),"report_job_id":job.id});db.commit();ticket=create_report_download_grant(job.id);return {"job_id":job.id,"copy_count":len(copies),"download_url":f"/api/v1/reports/public-download/{ticket}"}
 
 @router.post("/{book_id}/cover")
 async def upload_cover(book_id:int,file:UploadFile=File(...),admin:Admin=Depends(get_current_admin),db:Session=Depends(get_db)):

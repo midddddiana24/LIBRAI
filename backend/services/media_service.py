@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from PIL import Image, UnidentifiedImageError
 
 from backend.core.config import settings
+from backend.services import object_storage
 
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
@@ -40,10 +41,15 @@ def store_image(content: bytes, content_type: str | None, kind: str, entity_id: 
 
     private = kind == "users"
     directory = MEDIA_ROOT / ("private/users" if private else "covers")
-    directory.mkdir(parents=True, exist_ok=True)
     name = f"{kind[:-1]}-{entity_id}-{secrets.token_hex(10)}.webp"
     path = directory / name
-    image.save(path, format="WEBP", quality=86, method=6)
+    if object_storage.enabled():
+        normalized = BytesIO()
+        image.save(normalized, format="WEBP", quality=86, method=6)
+        object_storage.put(path.as_posix(), normalized.getvalue(), "image/webp")
+    else:
+        directory.mkdir(parents=True, exist_ok=True)
+        image.save(path, format="WEBP", quality=86, method=6)
     _remove_owned(old_value)
     return f"private/users/{name}" if private else f"/files/covers/{name}"
 
@@ -62,7 +68,12 @@ def _remove_owned(stored_value: str | None) -> None:
     if not stored_value:
         return
     relative = stored_value.removeprefix("/files/")
+    if ".." in Path(relative).parts:
+        return
     candidate = (MEDIA_ROOT / relative).resolve()
     allowed_roots = [(MEDIA_ROOT / "covers").resolve(), (MEDIA_ROOT / "private/users").resolve()]
-    if any(root in candidate.parents for root in allowed_roots) and candidate.is_file():
-        candidate.unlink()
+    if any(root in candidate.parents for root in allowed_roots):
+        if object_storage.enabled():
+            object_storage.delete((MEDIA_ROOT / relative).as_posix())
+        elif candidate.is_file():
+            candidate.unlink()

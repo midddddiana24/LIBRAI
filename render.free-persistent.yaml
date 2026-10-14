@@ -4,6 +4,7 @@ services:
   - type: web
     name: librai-api-free-pg
     runtime: python
+    region: singapore
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: alembic upgrade head && uvicorn backend.main:app --host 0.0.0.0 --port $PORT --no-access-log

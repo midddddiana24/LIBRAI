@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { LoaderCircle } from 'lucide-react'
+import { LoaderCircle, Volume2, VolumeX } from 'lucide-react'
 import { ApiError, api, bookDetail, books, health, mediaUrl, verifyBook, verifyUser } from './api'
 import type { ActiveBorrowing, Book, BookGrant, BorrowReceipt, Page, ReturnReceipt, UserGrant } from './api'
 import { QrCapture } from './QrCapture'
@@ -7,6 +7,8 @@ import AccountPanel from './AccountPanel'
 import KioskHome from './KioskHome'
 import { BorrowFlow, ReturnFlow } from './KioskTransaction'
 import StartupScreen from './StartupScreen'
+import VoiceControl from './VoiceControl'
+import { resolveVoiceCommand } from './voiceCommands'
 
 type View = 'home' | 'search' | 'detail' | 'borrow' | 'return' | 'account' | 'assistant' | 'discover'
 const SESSION_TIMEOUT_MS = 90_000
@@ -30,12 +32,18 @@ export default function KioskApp() {
   const [aiBooks, setAiBooks] = useState<Book[]>([])
   const [aiInteraction, setAiInteraction] = useState<number | null>(null)
   const [feedbackSent, setFeedbackSent] = useState(false)
+  const [voiceNotice, setVoiceNotice] = useState('')
+  const [speaking, setSpeaking] = useState(false)
   const [discoverKind, setDiscoverKind] = useState<'recommended' | 'popular' | 'new'>('recommended')
   const [discoverBooks, setDiscoverBooks] = useState<Book[]>([])
   const lastActivity = useRef(0)
   const [secondsLeft, setSecondsLeft] = useState(90)
+  const [sessionKey, setSessionKey] = useState(0)
 
   const endSession = useCallback(() => {
+    window.speechSynthesis?.cancel()
+    setSpeaking(false); setVoiceNotice('')
+    setSessionKey(current => current + 1)
     setUser(null); setCopy(null); setReceipt(null); setActiveReturn(null)
     setAiQuery(''); setAiAnswer(''); setAiBooks([]); setAiInteraction(null); setFeedbackSent(false); setError(''); setView('home')
     lastActivity.current = Date.now(); setSecondsLeft(90)
@@ -145,6 +153,36 @@ export default function KioskApp() {
     })
   }
 
+  function handleVoiceCommand(text: string) {
+    const command = resolveVoiceCommand(text)
+    if (!command) return
+    setError('')
+    switch (command.action) {
+      case 'home': setView('home'); setVoiceNotice('Home opened.'); break
+      case 'borrow': startBorrow(); setVoiceNotice('Borrowing opened. Scan your library ID to continue.'); break
+      case 'return': startReturn(); setVoiceNotice('Returns opened. Scan the book QR code to continue.'); break
+      case 'account': setView('account'); setVoiceNotice('Account opened. Scan your library ID to continue.'); break
+      case 'assistant': setView('assistant'); setVoiceNotice('Assistant opened. Ask a question or use the microphone.'); break
+      case 'discover': void discover(command.kind || 'recommended'); setVoiceNotice('Opening book suggestions.'); break
+      case 'search': setQuery(command.query); void loadBooks(command.query); setVoiceNotice(command.query ? `Searching for ${command.query}.` : 'Opening the catalog.'); break
+      case 'ask': setAiQuery(command.query); setView('assistant'); setVoiceNotice('Your words are ready. Tap Ask to send them.'); break
+    }
+  }
+
+  function readAloud(text: string) {
+    if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) { setVoiceNotice('Read aloud is unavailable on this device.'); return }
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'en-US'
+    utterance.rate = 0.94
+    utterance.onend = () => setSpeaking(false)
+    utterance.onerror = () => { setSpeaking(false); setVoiceNotice('This device could not read the text aloud. Check its speech settings.') }
+    setSpeaking(true)
+    window.speechSynthesis.speak(utterance)
+  }
+
+  function stopReading() { window.speechSynthesis?.cancel(); setSpeaking(false) }
+
   async function reserveSelected() {
     if (!selected || !user) return
     await run(async () => {
@@ -165,13 +203,14 @@ export default function KioskApp() {
       {online === false && <div className="connection-banner" role="alert"><div><strong>Library connection lost</strong><span>Borrowing, returns, and catalog updates need the server. Check the tablet connection.</span></div><button onClick={() => void health().then(setOnline)}>Try again</button></div>}
       {privateSession && secondsLeft <= 15 && <div className="session-warning" role="status"><strong>This session will clear in {secondsLeft} seconds.</strong><span>Touch the screen to keep working, or select End session to clear your information now.</span></div>}
       {error && <div className="alert error" role="alert">{error}</div>}
-      {view === 'home' && <KioskHome query={query} busy={busy} online={online} onQuery={setQuery} onSearch={search => void loadBooks(search)} onBorrow={startBorrow} onReturn={startReturn} onAccount={() => { setView('account'); setError('') }} onAssistant={() => setView('assistant')} onDiscover={() => void discover('recommended')} />}
+      {voiceNotice && <div className="voice-notice" role="status"><span>{voiceNotice}</span><button type="button" onClick={() => speaking ? stopReading() : readAloud(voiceNotice)}>{speaking ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}{speaking ? 'Stop reading' : 'Read aloud'}</button></div>}
+      {view === 'home' && <KioskHome key={sessionKey} query={query} busy={busy} online={online} onQuery={setQuery} onSearch={search => void loadBooks(search)} onBorrow={startBorrow} onReturn={startReturn} onAccount={() => { setView('account'); setError('') }} onAssistant={() => setView('assistant')} onDiscover={() => void discover('recommended')} onVoiceCommand={handleVoiceCommand} />}
       {view === 'search' && <><div className="page-heading"><div><p className="eyebrow">Library catalog</p><h1>Find a book</h1><p>{catalog.total} titles found</p></div><button onClick={() => setView('home')}>Home</button></div><form className="search-form" onSubmit={event => { event.preventDefault(); void loadBooks(query) }}><input aria-label="Search books" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search title, author, or topic" /><button className="primary" disabled={busy}>Search</button></form><div className="book-grid">{catalog.items.map(book => <button className="book-card" key={book.id} onClick={() => void showBook(book.id)}>{(book.cover_url || book.cover_image) ? <img src={mediaUrl(book.cover_url || book.cover_image)} alt="" /> : <div className="cover-placeholder">LIBRAI</div>}<strong>{book.title}</strong><span>{book.author}</span><small>{book.available_copies || 0} available · {book.shelf_location || 'Ask the librarian'}</small></button>)}</div>{!catalog.items.length && <div className="empty">No books found. Try another search.</div>}<div className="pagination"><button disabled={busy || catalogOffset === 0} onClick={() => void loadBooks(query, Math.max(0, catalogOffset - 20))}>Previous</button><span>{catalog.total ? `${catalogOffset + 1}–${Math.min(catalogOffset + 20, catalog.total)} of ${catalog.total}` : '0 results'}</span><button disabled={busy || catalogOffset + 20 >= catalog.total} onClick={() => void loadBooks(query, catalogOffset + 20)}>Next</button></div></>}
       {view === 'detail' && selected && <><button onClick={() => setView('search')}>← Back to results</button><div className="detail"><div className="detail-cover">{(selected.cover_url || selected.cover_image) ? <img src={mediaUrl(selected.cover_url || selected.cover_image)} alt="Book cover" /> : 'LIBRAI'}</div><div><p className="eyebrow">{selected.category || 'Library catalog'}</p><h1>{selected.title}</h1><h2>by {selected.author}</h2><p>{selected.description || 'No description available.'}</p><div className="facts"><span>Available: {selected.available_copies || 0}</span><span>Shelf: {selected.shelf_location || 'Ask the librarian'}</span></div>{(selected.available_copies || 0) > 0 ? <button className="primary large" onClick={startBorrow}>Borrow a copy</button> : user ? <button className="primary large" disabled={busy} onClick={() => void reserveSelected()}>Reserve this title</button> : <button onClick={() => setView('account')}>Scan your ID to reserve</button>}</div></div></>}
       {view === 'borrow' && <BorrowFlow user={user} copy={copy} receipt={receipt} busy={busy} onUser={token => void scanUser(token)} onBook={token => void scanBorrowBook(token)} onChangeUser={changeBorrowUser} onChangeBook={changeBorrowBook} onConfirm={() => void confirmBorrow()} onFinish={endSession} />}
       {view === 'return' && <ReturnFlow copy={copy} activeReturn={activeReturn} receipt={receipt} busy={busy} onBook={token => void scanReturnBook(token)} onChangeBook={changeReturnBook} onConfirm={() => void confirmReturn()} onFinish={endSession} />}
       {view === 'account' && <><div className="page-heading"><div><p className="eyebrow">Private session</p><h1>My account</h1></div><button onClick={endSession}>End session</button></div>{user ? <AccountPanel user={user} /> : <div className="panel"><p>Scan your library ID to see your borrowing history.</p><QrCapture label="your library ID" busy={busy} onToken={token => void scanUser(token)} /></div>}</>}
-      {view === 'assistant' && <><div className="page-heading"><div><p className="eyebrow">Book discovery</p><h1>Ask LIBRAI</h1></div><button onClick={() => setView('home')}>Home</button></div><div className="panel"><form onSubmit={event => void askAssistant(event)}><label htmlFor="ai-query">What would you like to read?</label><div className="inline"><input id="ai-query" value={aiQuery} onChange={event => setAiQuery(event.target.value)} placeholder="Books about Philippine history" /><button className="primary" disabled={busy || aiQuery.trim().length < 2}>Ask</button></div></form>{aiAnswer && <div className="answer" role="status">{aiAnswer}</div>}{aiInteraction && !feedbackSent && <div className="inline feedback"><span>Was this helpful?</span><button disabled={busy} onClick={() => void sendFeedback(true)}>Yes</button><button disabled={busy} onClick={() => void sendFeedback(false)}>No</button></div>}{feedbackSent && <p role="status" className="verified">Thank you for your feedback.</p>}</div><div className="book-grid">{aiBooks.map(book => <button className="book-card" key={book.id} onClick={() => void showBook(book.id)}><div className="cover-placeholder">LIBRAI</div><strong>{book.title}</strong><span>{book.author}</span><small>{book.available_copies || 0} available</small></button>)}</div></>}
+      {view === 'assistant' && <><div className="page-heading"><div><p className="eyebrow">Book discovery</p><h1>Ask LIBRAI</h1></div><button onClick={() => setView('home')}>Home</button></div><div className="panel"><form onSubmit={event => void askAssistant(event)}><label htmlFor="ai-query">What would you like to read?</label><div className="inline"><input id="ai-query" value={aiQuery} onChange={event => setAiQuery(event.target.value)} placeholder="Books about Philippine history" /><button className="primary" disabled={busy || aiQuery.trim().length < 2}>Ask</button></div></form><VoiceControl key={sessionKey} label="Dictate question" disabled={busy || online === false} onTranscript={setAiQuery} />{aiAnswer && <div className="answer" role="status">{aiAnswer}</div>}{aiAnswer && <button className="read-aloud" type="button" onClick={() => speaking ? stopReading() : readAloud(aiAnswer)}>{speaking ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}{speaking ? 'Stop reading' : 'Read answer aloud'}</button>}{aiInteraction && !feedbackSent && <div className="inline feedback"><span>Was this helpful?</span><button disabled={busy} onClick={() => void sendFeedback(true)}>Yes</button><button disabled={busy} onClick={() => void sendFeedback(false)}>No</button></div>}{feedbackSent && <p role="status" className="verified">Thank you for your feedback.</p>}</div><div className="book-grid">{aiBooks.map(book => <button className="book-card" key={book.id} onClick={() => void showBook(book.id)}><div className="cover-placeholder">LIBRAI</div><strong>{book.title}</strong><span>{book.author}</span><small>{book.available_copies || 0} available</small></button>)}</div></>}
       {view === 'discover' && <><div className="page-heading"><div><p className="eyebrow">Book discovery</p><h1>Explore titles</h1></div><button onClick={() => setView('home')}>Home</button></div><div className="inline tabs">{(['recommended', 'popular', 'new'] as const).map(kind => <button key={kind} className={discoverKind === kind ? 'primary' : ''} onClick={() => void discover(kind)} disabled={busy}>{kind === 'new' ? 'New arrivals' : kind === 'popular' ? 'Popular' : 'Recommended'}</button>)}</div><div className="book-grid">{discoverBooks.map(book => <button className="book-card" key={book.id} onClick={() => void showBook(book.id)}><div className="cover-placeholder">LIBRAI</div><strong>{book.title}</strong><span>{book.author}</span></button>)}</div>{!discoverBooks.length && <div className="empty">No suggestions available right now.</div>}</>}
     </main><footer>LIBRAI · Library services <span>Ask a librarian if you need help.</span></footer>
   </div>

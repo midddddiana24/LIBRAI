@@ -19,9 +19,9 @@ function messageFrom(body: unknown, status: number): string {
   return `The library server returned ${status}.`
 }
 
-export async function api<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
+export async function api<T>(path: string, options: RequestInit = {}, token?: string, timeoutMs = 12000): Promise<T> {
   const controller = new AbortController()
-  const timeout = window.setTimeout(() => controller.abort(), 12000)
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
   try {
     const response = await fetch(`${API_BASE}${path}`, {
       ...options,

@@ -1,4 +1,5 @@
 import { ArrowRight, BookOpen, LibraryBig, LoaderCircle, MessageCircle, RotateCcw, Search, Sparkles, UserRound } from 'lucide-react'
+import VoiceControl from './VoiceControl'
 
 type Props = {
   query: string
@@ -11,9 +12,10 @@ type Props = {
   onAccount: () => void
   onAssistant: () => void
   onDiscover: () => void
+  onVoiceCommand: (text: string) => void
 }
 
-export default function KioskHome({ query, busy, online, onQuery, onSearch, onBorrow, onReturn, onAccount, onAssistant, onDiscover }: Props) {
+export default function KioskHome({ query, busy, online, onQuery, onSearch, onBorrow, onReturn, onAccount, onAssistant, onDiscover, onVoiceCommand }: Props) {
   const unavailable = busy || online === false
 
   return <div className="kiosk-home">
@@ -39,6 +41,7 @@ export default function KioskHome({ query, busy, online, onQuery, onSearch, onBo
     </section>
 
     <section className="kiosk-explore" aria-label="Explore the library">
+      <div className="kiosk-voice-entry"><div><strong>Use your voice</strong><span>Say “borrow a book”, “return a book”, or “find history books”.</span></div><VoiceControl label="Voice command" disabled={unavailable} onTranscript={onVoiceCommand} /></div>
       <form className="kiosk-search" role="search" onSubmit={event => { event.preventDefault(); onSearch(query) }}>
         <label htmlFor="kiosk-home-search">Find a book</label>
         <div><input id="kiosk-home-search" value={query} onChange={event => onQuery(event.target.value)} placeholder="Search by title, author, or topic" /><button className="primary icon-button" disabled={unavailable}>{busy ? <LoaderCircle className="loading-spinner" aria-hidden="true" /> : <Search aria-hidden="true" />}<span>{busy ? 'Loading…' : 'Search'}</span></button></div>

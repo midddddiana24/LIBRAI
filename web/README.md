@@ -4,6 +4,8 @@ The new client has an Android tablet kiosk at `/` and a browser admin interface 
 
 The kiosk home gives Borrow and Return the largest touch targets, with search and account close by. Each transaction shows one QR/review step at a time. A private session warns before its 90-second inactivity timeout, and the home screen disables server actions while offline. The admin interface is a separate route with the existing staff login.
 
+On the kiosk home, tap **Voice command**, speak, then tap **Stop recording**. Commands such as “borrow a book”, “return a book”, “show my account”, and “find history books” open the matching flow. The microphone stops automatically after 12 seconds. In **Ask LIBRAI**, tap **Dictate question** to fill the question field, then tap **Ask**. Tap **Read answer aloud** to hear the answer using the device's installed speech voice. Voice commands only navigate or fill text; book transactions still require scanning and confirmation. Audio is sent to the backend `/speech/transcribe` endpoint, which requires `GEMINI_API_KEY` on the server. A microphone and permission are required on the tablet, and browser recording requires HTTPS or localhost.
+
 ## Local browser development
 
 1. Start the backend from the repository root with `uvicorn backend.main:app --host 127.0.0.1 --port 8000` after applying the migrations.
@@ -15,7 +17,7 @@ The browser origin must be listed in the backend's `CORS_ORIGINS`. Local Vite an
 
 ## Android tablet build
 
-The Android project is in `web/android`. It requires Android SDK API 36 and a full JDK 21 with `jlink`. The QR plugin requires Android API 26 or newer. The tablet must have network access to the backend and a camera.
+The Android project is in `web/android`. It requires Android SDK API 36 and a full JDK 21 with `jlink`. The QR plugin requires Android API 26 or newer. The tablet must have network access to the backend, a camera, and a microphone. Grant microphone access when the app requests it.
 
 In PowerShell, from `web/`:
 
@@ -35,4 +37,4 @@ Use `npm run android:open` to open the native project in Android Studio if it is
 
 ## Current verification boundary
 
-`npm run build`, `npm run lint`, backend tests, Android debug compilation, and an isolated browser-to-API borrow/return and session-timeout smoke test passed locally. Portrait and landscape screenshots show the redesigned home and borrow screen without horizontal overflow. Camera scanning, device install, signing, simultaneous kiosks, and production storage still need checks on the actual deployment.
+Earlier verification included a production web build, backend tests, Android debug compilation, and an isolated browser-to-API borrow/return and session-timeout smoke test. Camera scanning, microphone recording, speech playback, device install, signing, simultaneous kiosks, and production storage still need checks on the actual tablet and deployment. Use `npm run test:voice` for command-routing tests.

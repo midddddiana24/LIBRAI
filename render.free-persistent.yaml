@@ -23,7 +23,7 @@ services:
       - key: TOKENROUTER_API_KEY
         sync: false
       - key: MEDIA_BUCKET
-        sync: false
+        value: librai-media
       - key: AWS_ENDPOINT_URL_S3
         sync: false
       - key: AWS_ACCESS_KEY_ID

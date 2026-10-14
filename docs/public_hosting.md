@@ -1,88 +1,121 @@
-# Public hosting for LIBRAI
+# LIBRAI: step-by-step free online setup
 
-## Free setup selected for the online admin
+**Goal:** keep the existing library records and reset admin password, then let the website and Android kiosk use one public API. This setup uses Neon Free for PostgreSQL and private file storage, plus a new Render Free API. The current live website and API remain in place until the new setup is tested.
 
-Use the separate [`render.free-persistent.yaml`](../render.free-persistent.yaml) candidate: a **new Render Free API**, a **Neon Free PostgreSQL project**, and a **private Neon Object Storage bucket**. The current Render API and website stay in place until the new copy passes the checks below. The new API has not been deployed; the local backup has not been sent to Neon. Do not sync the paid `render.production.yaml` for this route.
+**Current status (14 October 2026):** The Neon CLI and editor integration are installed. This folder is linked **offline** to Neon project `small-river-91786237`, branch `production`; the link has not been verified with Neon. [`neon.ts`](../neon.ts) declares a private bucket named `librai-media`. **`neon deploy` has not succeeded.** The CLI still reports no signed-in account because browser login timed out twice. `npm run build` passed locally. The existing local database backup and media ZIP are still on this computer; no records have been uploaded to Neon. The new Render API has not been created.
 
-Render Free services lose local files on restart, so this candidate stores records in Neon PostgreSQL and cover images, private student photos, and report files in Neon Object Storage. The bucket stays private; LIBRAI serves covers through a public API route and serves photos/reports only through their existing signed routes. Neon announced 1 GB database and 5 GB object storage per Free project in October 2026; check the current limits in your dashboard before creating it. Free Render services sleep after 15 minutes of inactivity and may take about a minute to wake; free tiers have usage limits and are not a substitute for tested backups. See [Render Free limitations](https://render.com/docs/free), [Neon Free limits](https://neon.com/blog/neon-free-plan-1-gb-per-project), and [Neon Object Storage](https://neon.com/blog/building-neon-object-storage).
+## Part 1 — Sign in and create the private bucket
 
-1. Create a **Neon Free project** in **AWS Asia Pacific (Singapore), `aws-ap-southeast-1`**, and an Object Storage bucket named `librai-media`, with **private** access. Neon currently supports both PostgreSQL and Object Storage in this region; the new Render Free API is also configured for Singapore. Use the same main branch for the bucket and database. In Neon, copy the direct PostgreSQL connection string and the S3 endpoint, access key ID, secret access key, and region. These are secrets except the bucket name and endpoint. Keep them in Neon/Render settings and your local terminal; do not paste them into chat, Git, screenshots, or this Markdown file. See [Neon regions](https://neon.com/docs/introduction/regions).
-2. In Render, create a **new Blueprint** from the `online-admin-postgres` branch, selecting `render.free-persistent.yaml`. Review that it contains only one **Free** web service, named `librai-api-free-pg`, and no Render database or disk. Enter the Neon `DATABASE_URL` and private-bucket `MEDIA_BUCKET`, `AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_REGION` in the new service's Environment. The Blueprint generates `SECRET_KEY`; keep it stable. Set one AI provider key (`GEMINI_API_KEY` or `TOKENROUTER_API_KEY`) because production configuration currently requires one. The API will run `alembic upgrade head` and should return `database: connected` at `/health`.
-3. Import the saved local database backup **after the new API has migrated the empty Neon database**. In a PowerShell terminal at the repository root, run `\.venv\Scripts\python.exe -m backend.scripts.migrate_sqlite_to_postgres --sqlite-backup backups/librai-20261014-012653-887385.db`. Paste the Neon **direct** PostgreSQL URL into the hidden prompt. The target must be empty, so stop if the script reports existing rows; never clear a database to make the script run. Do not use the older pre-reset backup, because it has the old admin password hash.
-4. In the same local PowerShell terminal, set the five object-storage environment variables for that terminal only and run `\.venv\Scripts\python.exe -m backend.scripts.upload_media_bundle --media-bundle backups/librai-media-20261014-012656-462596.zip`. The script uploads the four referenced files to the private bucket and refuses to overwrite existing objects. Clear the terminal variables when finished. The upload transfers existing cover images, a private student photo, and a report, so confirm the Neon project is the intended home for these records before running it. Keep the original backup and ZIP offline.
-5. Sign in through the current website's `/admin` **only after** updating its `VITE_API_BASE_URL` to `https://<new-api-host>/api/v1` and rebuilding the kiosk service. This value is built into the web app, so changing it in Render without a redeploy will not switch existing JavaScript. The Android APK must also be rebuilt with the new URL. Before switching either client, verify the new API's health, admin login with the locally reset password, all expected record counts, cover/photo/report downloads, and a test circulation transaction. Restart the new API and verify the data and files are still present.
+Do these steps on the computer that contains this repository. You can use the terminal built into VS Code; you do not need to find a separate PowerShell app.
 
-Because this workspace has no linked Render or Neon account, creation of the Free project, secret entry, live import, and online verification are still owner actions. The current local backup is the complete source of records according to the owner (1 admin, 2 users, 6 books, 8 copies, 1 borrowing). No password or connection URL should be sent in chat. Back up both the PostgreSQL data and Object Storage files on a schedule; a free account has limited recovery.
+1. In VS Code, choose **Terminal → New Terminal**. If needed, move to the project folder:
 
-The Android kiosk and browser admin need one public HTTPS API. This repository has a production candidate at [`render.production.yaml`](../render.production.yaml). It creates a paid FastAPI web service, paid PostgreSQL, a persistent disk for covers, photos and reports, and a static site for the React admin UI. It has **not been deployed**. The existing [`render.yaml`](../render.yaml) remains a free demo setup with local SQLite; do not use it for library records.
+   ```powershell
+   cd C:\Users\rober\Desktop\LIBRAI
+   ```
 
-## Current public URLs (checked 2026-10-13)
+2. Run:
 
-- API: `https://librai-api-zjic.onrender.com` returned HTTP 200 from `/health` with `database: connected`. Its public OpenAPI route list matched the local 50-path snapshot. This does not establish which database or disk the live service uses.
-- Kiosk: `https://librai-kiosk-zjic.onrender.com` was configured to serve the older Flet web app, including at `/admin`. The local [`render.yaml`](../render.yaml) now builds the React kiosk and admin client for that same service name, but the live service will stay on Flet until these changes are committed, pushed, and deployed.
-- Preflight requests from `https://localhost` to the API's QR endpoint initially returned HTTP 400 without an `Access-Control-Allow-Origin` header. The API's **live** `CORS_ORIGINS` must include both `https://localhost` for Android and `https://librai-kiosk-zjic.onrender.com` for the browser site. The user reported updating and redeploying this setting; recheck it after the React site deploys.
-- A debug Android APK has been compiled with `VITE_API_BASE_URL=https://librai-api-zjic.onrender.com/api/v1`. It is a **pilot build only** until CORS, real-camera behavior, and data persistence are verified.
+   ```powershell
+   neon login
+   ```
 
-An earlier live recheck accepted `https://librai-kiosk.onrender.com` but rejected the Android origin. After the API redeployed, an OPTIONS request from `https://localhost` returned HTTP 200 with `Access-Control-Allow-Origin: https://localhost` at 09:21 UTC on 2026-10-13. A subsequent check from this workspace failed DNS resolution, so the current live response should be checked again before the tablet pilot. The pasted deploy log confirms that this service used SQLite and ran the initial migrations on that deploy. Do not use this database for real library records: a Render free web service's local SQLite database is lost on restart or redeploy.
+   A Neon sign-in page should open in your browser. Complete it promptly, then return to the **same VS Code terminal**. The terminal must report a successful login. A page showing a `psql -h ...` command is Neon's database connection screen; that command does not sign in the CLI. If the terminal says the login timed out, run `neon login` again in **your own VS Code terminal** and finish the newly opened browser page within about a minute. If it still fails, tell me the browser message and terminal error; do not share tokens or passwords.
 
-## Show the React design at the existing kiosk URL
+3. Check that the CLI really saved the login:
 
-The free demo [`render.yaml`](../render.yaml) now defines `librai-kiosk` as a Node web service. It runs `cd web && npm ci && npm run build`, then `node web/server.mjs`. The server serves `/` as the kiosk and `/admin` as the admin client. `VITE_API_BASE_URL` is set to `https://librai-api-zjic.onrender.com/api/v1` during the build; this is a public browser value, not a secret.
+   ```powershell
+   neon profile list
+   ```
 
-1. Commit and push the React files, `web/server.mjs`, and `render.yaml` to the branch connected to Render. Local edits and local APK builds do not update the website.
-2. In Render, open the existing **librai-kiosk** service. If it is managed by a Blueprint, sync that Blueprint and check that the runtime changes from Python to Node. Otherwise, open **Settings > Build > Source > Edit**, choose Node, and set the build and start commands above. Set `VITE_API_BASE_URL` to the API URL in **Environment** and deploy. Render supports changing an existing native service's runtime; confirm the actual service configuration before deploying.
-3. After a successful deploy, open `https://librai-kiosk-zjic.onrender.com/` in a private browser window. It should show “What would you like to do today?” and the Borrow/Return cards. Open `/admin` and confirm the React staff login appears. If the old Flet page remains, inspect which branch, commit, runtime, build command, and start command the live service actually used.
-4. Test a browser API request from the new site. If the browser reports CORS, confirm the API's live `CORS_ORIGINS` contains the exact kiosk origin and redeploy the API.
+   The active profile's **Account** must show your Neon account, rather than `-` or `missing`. **Stop here if it still shows `-`.**
 
-Render references: [changing native runtimes](https://render.com/docs/native-runtimes#changing-a-services-runtime), [Blueprint service fields](https://render.com/docs/blueprint-spec), and [deploy settings](https://render.com/docs/deploys).
+4. In the [Neon Console](https://console.neon.tech/), open project `small-river-91786237`. On its Overview page, check that its region is **AWS Asia Pacific (Singapore)** (`aws-ap-southeast-1`) and that the branch named `production` exists. [Neon's region table](https://neon.com/docs/introduction/regions) confirms that Singapore supports both PostgreSQL and Object Storage. A project's region cannot be changed after creation; if this one is elsewhere, stop and tell me the region before deploying.
 
-## Move the confirmed local records to an online admin
+5. Back in the VS Code terminal, preview the proposed Neon change:
 
-The owner confirmed that the local SQLite database contains all records they need to keep. This is the route to make the newly reset local admin account available online without relying on the existing free service's ephemeral SQLite file.
+   ```powershell
+   neon config plan
+   ```
 
-1. Finish the local password reset, then create a **new** backup with `python -m backend.scripts.backup_sqlite`. An older backup made before the reset still contains the old password hash. Keep the new backup file private and outside Git.
-2. Package the files referenced by that backup: `python -m backend.scripts.bundle_media --sqlite-backup backups/<new-backup>.db`. The ZIP includes only referenced covers, private user photos, and generated reports. Keep it private too. Database records alone do not contain the image and report bytes.
-3. Review the paid resources in [`render.production.yaml`](../render.production.yaml), then deploy it from a branch with these scripts. This creates a **new** API, persistent PostgreSQL, and a persistent media disk; it does not repair or overwrite the current free API. The production Blueprint uses `ipAllowList: []`, which blocks external database connections by default. The paid resources incur charges. Do not point kiosks to the new API yet.
-4. Let the new API run `alembic upgrade head` against its empty PostgreSQL database. In Render's database networking settings, temporarily allow only the computer's public IP. Copy the database's **External Database URL** from Render; keep it secret. From the repository root run `python -m backend.scripts.migrate_sqlite_to_postgres --sqlite-backup backups/<new-backup>.db`. Paste the URL at the hidden prompt. The script checks SQLite integrity, requires matching migrated schemas and an empty target, copies all application tables in one transaction, and preserves record IDs. It refuses to merge into populated tables. Restore the database's external IP allow list to empty afterward; the Render API uses the internal URL.
-5. Transfer the media ZIP to the new paid API's persistent disk using Render's [SCP instructions](https://render.com/docs/disks#transferring-files), then extract it from `/opt/render/project/src` so the ZIP's `generated/...` paths land under `/opt/render/project/src/generated`. The ZIP should not be put in Git or a public web directory. Check that the referenced covers, photo, and report open in the new API.
-6. Set the new API's `CORS_ORIGINS` to include `https://localhost`, the current kiosk origin, and the actual admin-site origin. Set the admin site's `VITE_API_BASE_URL` to the new API URL ending `/api/v1`, build/deploy it, and sign in at its `/admin` path with the reset password. Confirm the migrated counts (currently 1 admin, 2 users, 6 books, 8 copies, 1 borrowing) and test a borrow and return. Once verified, update the existing kiosk's `VITE_API_BASE_URL` and rebuild its website and Android APK to point to the new API.
+   Check that it targets the project and `production` branch above and creates the **private `librai-media` bucket**. If it proposes deleting or replacing something you need, stop and share only the non-secret summary.
 
-The migration script has been tested locally against matching SQLite schemas. The fresh real backup passed its integrity check and copied into an isolated in-memory SQLite target (18 tables, 137 rows), and the media bundle contains its four referenced files. A live PostgreSQL import, media transfer, and online login still need verification after the paid resources exist. Do not delete the local backup after deployment.
+6. Apply the plan:
 
-## Before creating services
+   ```powershell
+   neon deploy
+   ```
 
-1. Review Render's current charges in its dashboard. The proposed web service, database and disk incur charges when created. The free web service loses uploaded files on restart, and free PostgreSQL expires after 30 days, so it cannot hold school records reliably.
-2. Connect the existing GitHub repository (`midddddiana24/LIBRAI`) to Render. The current local implementation files must be committed and pushed before Render can build them. In the Render dashboard, choose **New > Blueprint**, select the repository, and choose `render.production.yaml` as the Blueprint file. Review the proposed paid resources before syncing. Use a different name if an existing `librai-api-prod` or `librai-admin-prod` service is already managed elsewhere.
-3. For the API's `CORS_ORIGINS`, initially enter `https://localhost`. After the static site is created, update it to `https://localhost,https://<actual-admin-host>` (origins have no path or trailing slash). Capacitor uses `https://localhost` on Android; the browser admin uses its real public origin.
-4. The Blueprint may ask for `VITE_API_BASE_URL` before it has assigned the API hostname. Enter the expected `https://librai-api-prod.onrender.com/api/v1` for the initial build, then inspect the API service's actual URL. If Render assigned a different hostname, edit this variable and redeploy the static site. This value is compiled into the JavaScript bundle.
-5. Provide at least one AI provider key to the API (`GEMINI_API_KEY` or `TOKENROUTER_API_KEY`) because the current production settings require one. Put it only in Render's environment settings. The API also needs the generated `SECRET_KEY`; keep its value stable across deploys or existing tokens will expire.
+   Expect a success message for the bucket and a message that Neon variables were pulled into this project's ignored `.env` file. The file contains credentials; **do not commit it or paste it into chat**. If the command fails, stop and share the error with secrets removed. You can confirm the bucket in the Neon Console under **Object Storage**.
 
-The Blueprint connects the API to Render PostgreSQL over its internal connection string. The backend converts Render's `postgresql://` URL to the installed `psycopg` driver. Alembic runs before each deploy. The disk is mounted over `generated/`, which is where this backend currently stores public covers, private user photos, and generated reports. PostgreSQL is not on that disk. Keep the API in a single instance while this local disk is used.
+**At this point, tell me “Neon deploy succeeded.”** I can check the database and file connections and handle the record import with you. Do not switch the website or Android app yet.
 
-The hosted Uvicorn process disables raw access logs, and the application logs route templates, so short-lived grants in URLs are not written to access logs. Review Render's request-log settings separately if enabled outside this process.
+## Part 2 — Move the existing records and files
 
-## First deployment checks
+The saved sources are `backups/librai-20261014-012653-887385.db` and `backups/librai-media-20261014-012656-462596.zip`. They contain the locally reset admin account and all records you confirmed need keeping: 2 users, 6 books, 8 copies, and 1 borrowing. The ZIP contains four referenced files, including a private student photo. Keep both files private and keep an offline copy after migration.
 
-1. Open `https://<actual-api-host>/health`. It must return `status: healthy` and `database: connected`.
-2. Open `https://<actual-admin-host>/admin`. Open the browser developer console and check that requests go to `https://<actual-api-host>/api/v1`, without CORS or mixed-content errors. If either hostname differs from what you entered, update the Render environment variable and redeploy the affected service.
-3. If this is a fresh empty deployment, open the paid API service's Render shell and run `python -m backend.scripts.manage_admin create --username admin --email you@example.org`. Enter and confirm a new password of at least 12 characters when prompted. If you imported the confirmed local database as described above, **skip account creation**: its admin account and new password hash were copied with the other records. Use `python -m backend.scripts.manage_admin reset-password --username admin` only if that imported password needs changing. **Do not run `backend.scripts.seed` in production**; it creates demo records and prints QR tokens.
-4. Log into `/admin`, add one test book and copy, generate its QR, then test a real borrow and return on an Android tablet. Verify the admin page sees each transaction. Test Voice command, Dictate question, and Read answer aloud on the tablet after granting microphone access. Restart the API service and confirm the book, transaction, cover and reports remain available.
-5. Configure and exercise PostgreSQL backup/restore and disk-file recovery before using real student records. A database backup alone does not include cover, photo or report files. Record who owns these backups and the recovery procedure.
+Do this only after Part 1 succeeds and the `production` branch is confirmed to be the intended place for these records.
 
-## Build the Android app against the live API
+1. In `.env`, confirm the keys `DATABASE_URL`, `AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_REGION` are present. Add this line once if it is missing:
 
-From `web/`, set `VITE_API_BASE_URL=https://<actual-api-host>/api/v1` and run `npm run android:sync`, then build the debug APK from `web/android` with `./gradlew.bat assembleDebug`. Install it on the target tablet and test camera scanning over both school Wi-Fi and another internet connection. For routine distribution, create a signed release build and keep the signing key outside the repository. The current debug APK includes the known Render API URL, but it is still a pilot build until physical camera and persistence checks pass.
+   ```dotenv
+   MEDIA_BUCKET=librai-media
+   ```
 
-## Current limits
+   Neon writes the credentials; never invent them or send them to me. The Python API reads these values from `.env`. For schema migration and data import, use Neon's **Direct** PostgreSQL connection, whose host does **not** contain `-pooler`. If `.env` has a pooled URL, select **Direct connection** in Neon Console → **Connect**, then use that direct URL for the migration. Do not paste it into chat. [Neon recommends direct connections for migrations](https://neon.com/docs/connect/connection-pooling).
 
-### Admin access on the current Free + SQLite API
+2. Run the existing Alembic migrations on the **empty** Neon database from the repository root:
 
-The existing free `librai-api` service has no Render shell or one-off job access. Its SQLite database lives on the service's ephemeral filesystem. If it contains records you need to keep, **do not redeploy, restart, change its start command, or run `seed.py` to reset an admin**: those actions can lose the database and its records. Setting `LIBRAI_ADMIN_PASSWORD` in Render's environment does not reset an existing account; the current API has no password recovery or admin creation endpoint. The stored password hash cannot be converted back into the original password.
+   ```powershell
+   .\.venv\Scripts\python.exe -m alembic upgrade head
+   ```
 
-`manage_admin.py` works only where `DATABASE_URL` points to the database being changed. Running it on a local SQLite file will not change the hosted account. A newly created PostgreSQL database will be empty; creating one does not migrate the current SQLite records. The supported recovery path is to access a preserved copy of the live database, then migrate its data to persistent storage and run the command against that database. If the only copy is inside the running free service, ask Render support whether that instance's SQLite file can be exported **before** any restart or redeploy. This is a request for help, not a guaranteed recovery method. There is no verified self-service method in this repository to extract all records from that service without a working admin login.
+   If this fails, stop. Do not run `seed.py`, delete tables, or try the import on an unknown database.
 
-For a local SQLite database, first run `python -m backend.scripts.backup_sqlite` from the repository root and keep the resulting file in a safe location. It uses SQLite's online backup operation so committed WAL writes are included. Then run `python -m backend.scripts.manage_admin reset-password --username admin` or `python -m backend.scripts.manage_admin create --username new_admin --email you@example.org`. The command prompts for the new password and does not touch books, students, or transactions. Existing issued admin tokens can remain valid until their normal expiration (currently 60 minutes), so changing a password is not an immediate sign-out of all sessions.
+3. Copy the local backup into Neon. The command asks for the **Direct PostgreSQL URL**; input is hidden as you type or paste. Use the backup made **after** the admin password reset:
 
-The React deployment change is prepared locally, not verified on the live Render service. This workspace has no connected Render account, so its current runtime, branch, deployment status, data persistence, and backups cannot be confirmed here. The feature matrix in [`frontend_feature_matrix.md`](frontend_feature_matrix.md) lists remaining UI work. Persistent disks also mean the API cannot scale to multiple Render instances without moving media to shared object storage.
+   ```powershell
+   .\.venv\Scripts\python.exe -m backend.scripts.migrate_sqlite_to_postgres --sqlite-backup backups/librai-20261014-012653-887385.db
+   ```
 
-Render reference: [Blueprint fields](https://render.com/docs/blueprint-spec), [persistent disks](https://render.com/docs/disks), [free tier limits](https://render.com/docs/free), and [compute plans](https://render.com/docs/compute-plans).
+   Expect `COPY_COMPLETE`. The script requires an empty target and matching Alembic versions. If it reports existing records or a mismatch, **stop**. It will not merge or erase them automatically.
+
+4. Upload the matching files into the private Neon bucket:
+
+   ```powershell
+   .\.venv\Scripts\python.exe -m backend.scripts.upload_media_bundle --media-bundle backups/librai-media-20261014-012656-462596.zip
+   ```
+
+   Expect `MEDIA_UPLOAD_COMPLETE files=4`. If the upload fails partway, stop and ask for help before repeating it; the script refuses to overwrite existing objects.
+
+5. Test the API locally against Neon:
+
+   ```powershell
+   .\.venv\Scripts\python.exe -m uvicorn backend.main:app --host 127.0.0.1 --port 8001
+   ```
+
+   Open `http://127.0.0.1:8001/health` in a browser. It should say `status: healthy` and `database: connected`. Press **Ctrl+C** in the terminal to stop the local API. Then run `npm run build` from the repository root; it should end with `✓ built`. A healthy response proves the database connection, but we still need to test sign-in, cover/photo/report downloads, and a real borrow/return before switching clients.
+
+## Part 3 — Create the new Free API on Render
+
+Do this after Part 2 is verified. The free Render service is separate from your current API, so the existing site is not changed during setup.
+
+1. The current code must be committed and pushed to the `online-admin-postgres` GitHub branch before Render can build it. Check with me before this step if Part 1 or 2 failed; a local edit alone is not deployed.
+2. In [Render](https://dashboard.render.com/), choose **New → Blueprint**, select the `LIBRAI` GitHub repository and the `online-admin-postgres` branch, then select [`render.free-persistent.yaml`](../render.free-persistent.yaml). Review the preview: it should create **one Free web service** named `librai-api-free-pg` in **Singapore**, with no Render database or disk. Do not select the paid `render.production.yaml` file.
+3. In that new API service's **Environment**, enter the Neon values for `DATABASE_URL`, `AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_REGION`. `MEDIA_BUCKET=librai-media` is in the Blueprint. Add **one** AI provider key (`GEMINI_API_KEY` or `TOKENROUTER_API_KEY`), because this backend currently requires one in production. Render generates `SECRET_KEY`; keep it stable across deploys. Put secrets in Render only, never Git or chat.
+4. Deploy the new service. Open `https://<new-api-host>/health`. It must say `status: healthy` and `database: connected`. If the service was idle, Render Free may take roughly a minute to wake. [Render Free limitations](https://render.com/docs/free) explain its sleep and usage limits.
+5. Verify admin sign-in with the locally reset password, the expected record counts, the four files, and a test borrow and return. Restart the new API service and confirm the records and files still appear. Keep the local backup and ZIP until restore has been tested.
+
+## Part 4 — Switch the website and Android kiosk
+
+Only after the new API passes the checks above:
+
+1. In Render, open the existing **librai-kiosk** service. Change its `VITE_API_BASE_URL` to `https://<new-api-host>/api/v1` and **redeploy** the website; this value is compiled into the JavaScript build.
+2. Open `https://librai-kiosk-zjic.onrender.com/admin` and sign in. Confirm the migrated books, users, and borrowing appear. Test from a phone browser as well.
+3. Rebuild and install the Android APK with the same new API URL. Test a real QR borrow and return on the tablet using school Wi-Fi and another internet connection. The old APK still points to the old API until rebuilt.
+
+## What is free, and what to keep safe
+
+Neon announced 1 GB PostgreSQL and 5 GB Object Storage per Free project in October 2026; [check the current Free limits](https://neon.com/blog/neon-free-plan-1-gb-per-project) in your account. Render Free services sleep and lose **local** files on restart, which is why this setup places records and files in Neon. Free plans still have usage and recovery limits. Make regular backups of **both** PostgreSQL data and Object Storage files; a database backup alone does not contain images or reports.
+
+The old API at `https://librai-api-zjic.onrender.com` and the old website remain unchanged until Part 4. `neon init` only installed tooling and wrote local configuration; it did **not** create the bucket, import records, or publish the API.

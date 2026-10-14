@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from botocore.config import Config
@@ -10,29 +9,36 @@ from botocore.exceptions import ClientError
 import boto3
 from fastapi import HTTPException
 from fastapi.responses import FileResponse, Response
+from backend.core.config import settings
 
 
 def enabled() -> bool:
-    return bool(os.environ.get("MEDIA_BUCKET"))
+    return bool(settings.media_bucket)
 
 
 def _client():
-    required = ("MEDIA_BUCKET", "AWS_ENDPOINT_URL_S3", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION")
-    missing = [key for key in required if not os.environ.get(key)]
+    required = {
+        "MEDIA_BUCKET": settings.media_bucket,
+        "AWS_ENDPOINT_URL_S3": settings.aws_endpoint_url_s3,
+        "AWS_ACCESS_KEY_ID": settings.aws_access_key_id,
+        "AWS_SECRET_ACCESS_KEY": settings.aws_secret_access_key,
+        "AWS_REGION": settings.aws_region,
+    }
+    missing = [key for key, value in required.items() if not value]
     if missing:
         raise RuntimeError("Object storage is not fully configured: " + ", ".join(missing))
     return boto3.client(
         "s3",
-        endpoint_url=os.environ["AWS_ENDPOINT_URL_S3"],
-        region_name=os.environ["AWS_REGION"],
-        aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-        aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
+        endpoint_url=settings.aws_endpoint_url_s3,
+        region_name=settings.aws_region,
+        aws_access_key_id=settings.aws_access_key_id,
+        aws_secret_access_key=settings.aws_secret_access_key,
         config=Config(s3={"addressing_style": "path"}),
     )
 
 
 def put(key: str, content: bytes, media_type: str) -> None:
-    _client().put_object(Bucket=os.environ["MEDIA_BUCKET"], Key=key, Body=content, ContentType=media_type)
+    _client().put_object(Bucket=settings.media_bucket, Key=key, Body=content, ContentType=media_type)
 
 
 def put_file(path: Path) -> str:
@@ -45,7 +51,7 @@ def put_file(path: Path) -> str:
 
 
 def delete(key: str) -> None:
-    _client().delete_object(Bucket=os.environ["MEDIA_BUCKET"], Key=key)
+    _client().delete_object(Bucket=settings.media_bucket, Key=key)
 
 
 def media_response(path: str | Path, *, media_type: str | None = None, filename: str | None = None, headers: dict[str, str] | None = None):
@@ -58,7 +64,7 @@ def media_response(path: str | Path, *, media_type: str | None = None, filename:
     if not key.startswith("generated/") or ".." in Path(key).parts:
         raise HTTPException(404, "File not found.")
     try:
-        obj = _client().get_object(Bucket=os.environ["MEDIA_BUCKET"], Key=key)
+        obj = _client().get_object(Bucket=settings.media_bucket, Key=key)
         body = obj["Body"].read()
     except ClientError as exc:
         code = exc.response.get("Error", {}).get("Code", "")

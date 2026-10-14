@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 .env
+.env.local
+.neon
 backups/
 .flet/
 .pytest_cache/
@@ -12,3 +14,4 @@ backups/
 generated/
 .coverage
 htmlcov/
+node_modules/

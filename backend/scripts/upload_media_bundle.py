@@ -1,8 +1,8 @@
 """Upload a private LIBRAI media bundle to S3-compatible object storage.
 
 The bucket must exist and be private. MEDIA_BUCKET, AWS_ENDPOINT_URL_S3,
-AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_REGION come from environment
-variables. Do not put the bundle, credentials, or command transcripts in Git.
+AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_REGION come from the local
+.env file or process environment. Do not put the bundle or credentials in Git.
 """
 
 from __future__ import annotations
@@ -14,12 +14,12 @@ from pathlib import Path, PurePosixPath
 from botocore.exceptions import ClientError
 
 from backend.services.object_storage import _client
-import os
+from backend.core.config import settings
 
 
 def upload(bundle: Path) -> int:
     client = _client()
-    bucket = os.environ["MEDIA_BUCKET"]
+    bucket = settings.media_bucket
     with zipfile.ZipFile(bundle) as archive:
         files = [info for info in archive.infolist() if not info.is_dir()]
         for info in files:

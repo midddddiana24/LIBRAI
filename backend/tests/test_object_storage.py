@@ -6,6 +6,7 @@ from pathlib import Path
 from PIL import Image
 
 from backend.services import media_service, object_storage
+from backend.core.config import settings
 
 
 class FakeBody:
@@ -37,7 +38,7 @@ class FakeS3:
 def test_private_object_storage_keeps_media_after_local_files_are_gone(monkeypatch, tmp_path):
     fake = FakeS3()
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("MEDIA_BUCKET", "librai-media")
+    monkeypatch.setattr(settings, "media_bucket", "librai-media")
     monkeypatch.setattr(object_storage, "_client", lambda: fake)
     monkeypatch.setattr(media_service, "MEDIA_ROOT", Path("generated"))
     image = BytesIO()

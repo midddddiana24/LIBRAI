@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     smtp_from: str | None = None
     smtp_use_tls: bool = True
+    media_bucket: str | None = None
+    aws_endpoint_url_s3: str | None = None
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: str | None = None
+    aws_region: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", env_prefix="", case_sensitive=False, extra="ignore")
 
@@ -73,6 +78,8 @@ class Settings(BaseSettings):
                 raise ValueError("Production CORS_ORIGINS cannot contain '*'.")
             if any(value in {"replace-with-at-least-32-random-characters", "development-only-change-this-secret-key"} for value in (self.secret_key,)):
                 raise ValueError("Production secrets must not use development placeholders.")
+            if self.media_bucket and not all((self.aws_endpoint_url_s3, self.aws_access_key_id, self.aws_secret_access_key, self.aws_region)):
+                raise ValueError("Production object storage requires the Neon AWS endpoint, access key, secret key, and region.")
         return self
 
 

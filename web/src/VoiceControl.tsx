@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { LoaderCircle, Mic, Square } from 'lucide-react'
 import { api } from './api'
+import { recordingHasAudibleAudio } from './audioActivity'
 
 const MAX_RECORDING_MS = 12_000
 const MAX_AUDIO_BYTES = 4 * 1024 * 1024
 
-type Props = { label: string; disabled?: boolean; onTranscript: (text: string) => void }
+type Props = { label: string; disabled?: boolean; confirmBeforeUse?: boolean; onTranscript: (text: string) => void }
 
 function recordingType(): string {
   for (const type of ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']) {
@@ -14,9 +15,10 @@ function recordingType(): string {
   return ''
 }
 
-export default function VoiceControl({ label, disabled = false, onTranscript }: Props) {
-  const [status, setStatus] = useState<'idle' | 'listening' | 'transcribing'>('idle')
+export default function VoiceControl({ label, disabled = false, confirmBeforeUse = false, onTranscript }: Props) {
+  const [status, setStatus] = useState<'idle' | 'requesting' | 'listening' | 'transcribing'>('idle')
   const [message, setMessage] = useState('')
+  const [draft, setDraft] = useState<string | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const timerRef = useRef<number | null>(null)
@@ -43,13 +45,15 @@ export default function VoiceControl({ label, disabled = false, onTranscript }: 
 
   async function start() {
     setMessage('')
+    setDraft(null)
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
       setMessage('Microphone recording is unavailable in this browser. Use a supported HTTPS browser or the Android app.')
       return
     }
+    setStatus('requesting')
     let stream: MediaStream | null = null
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } })
       if (!mountedRef.current) { stream.getTracks().forEach(track => track.stop()); return }
       streamRef.current = stream
       const mimeType = recordingType()
@@ -76,16 +80,24 @@ export default function VoiceControl({ label, disabled = false, onTranscript }: 
         if (!blob.size) { setStatus('idle'); setMessage('No audio was recorded. Please try again.'); return }
         if (blob.size > MAX_AUDIO_BYTES) { setStatus('idle'); setMessage('Recording is too large. Please try a shorter command.'); return }
         setStatus('transcribing')
-        const form = new FormData()
-        form.append('audio', blob, type === 'audio/m4a' ? 'speech.m4a' : type === 'audio/ogg' ? 'speech.ogg' : 'speech.webm')
-        void api<{ text: string }>('/speech/transcribe', { method: 'POST', body: form }, undefined, 45_000)
-          .then(result => {
-            if (!mountedRef.current) return
-            const text = result.text.trim()
-            setMessage(text ? `Heard: “${text}”` : 'No words were detected. Please try again.')
-            if (text) onTranscriptRef.current(text)
-          })
-          .catch(error => { if (mountedRef.current) setMessage(error instanceof Error ? error.message : 'Speech transcription failed.') })
+        void (async () => {
+          const audible = await recordingHasAudibleAudio(blob)
+          if (!mountedRef.current) return
+          if (audible === false) { setMessage('No clear sound was recorded. Move closer to the microphone and try again.'); return }
+          const form = new FormData()
+          form.append('audio', blob, type === 'audio/m4a' ? 'speech.m4a' : type === 'audio/ogg' ? 'speech.ogg' : 'speech.webm')
+          const result = await api<{ text: string }>('/speech/transcribe', { method: 'POST', body: form }, undefined, 45_000)
+          if (!mountedRef.current) return
+          const text = result.text.trim()
+          if (!text) { setMessage('No words were detected. Please try again.'); return }
+          if (confirmBeforeUse) {
+            setDraft(text)
+            setMessage('Check the words below. You can correct them before running the command.')
+          } else {
+            setMessage(`Heard: “${text}”`)
+            onTranscriptRef.current(text)
+          }
+        })().catch(error => { if (mountedRef.current) setMessage(error instanceof Error ? error.message : 'Speech transcription failed.') })
           .finally(() => { if (mountedRef.current) setStatus('idle') })
       }
       recorder.start()
@@ -102,10 +114,11 @@ export default function VoiceControl({ label, disabled = false, onTranscript }: 
   }
 
   return <div className="voice-control">
-    <button type="button" className={status === 'listening' ? 'voice-button listening' : 'voice-button'} disabled={disabled || status === 'transcribing'} onClick={status === 'listening' ? stop : () => void start()}>
-      {status === 'listening' ? <Square aria-hidden="true" /> : status === 'transcribing' ? <LoaderCircle className="loading-spinner" aria-hidden="true" /> : <Mic aria-hidden="true" />}
-      <span>{status === 'listening' ? 'Stop recording' : status === 'transcribing' ? 'Transcribing…' : label}</span>
+    <button type="button" className={status === 'listening' ? 'voice-button listening' : 'voice-button'} disabled={disabled || status === 'requesting' || status === 'transcribing'} onClick={status === 'listening' ? stop : () => void start()}>
+      {status === 'listening' ? <Square aria-hidden="true" /> : status === 'requesting' || status === 'transcribing' ? <LoaderCircle className="loading-spinner" aria-hidden="true" /> : <Mic aria-hidden="true" />}
+      <span>{status === 'listening' ? 'Stop recording' : status === 'requesting' ? 'Connecting microphone…' : status === 'transcribing' ? 'Transcribing…' : label}</span>
     </button>
     <span className="voice-message" role="status" aria-live="polite">{message || (status === 'listening' ? 'Listening. Speak now, then tap Stop.' : '')}</span>
+    {draft !== null && <div className="voice-review"><label htmlFor="voice-recognized-words">Words heard</label><input id="voice-recognized-words" value={draft} onChange={event => setDraft(event.target.value)} /><div><button type="button" className="primary" disabled={!draft.trim()} onClick={() => onTranscriptRef.current(draft.trim())}>Run command</button><button type="button" onClick={() => void start()}>Try again</button></div></div>}
   </div>
 }

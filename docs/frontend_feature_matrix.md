@@ -10,7 +10,7 @@ This matrix records the new `web/` client against the existing FastAPI backend. 
 | Return | `GET /borrowings/active/by-copy/{id}`, `POST /returns` | Sequential book, review, receipt flow | Real book return and fine outcome |
 | Account | `GET /borrowings`, `/reservations`, `/notifications`, `/fines` | Session-only account view | Tablet privacy and expired grant behavior |
 | Renewal and reservation | `POST /borrowings/{id}/renew`, `POST/DELETE /reservations` | Account renewal/cancellation; detail reservation | Full policy conflict cases |
-| Discovery and assistant | `POST /ai/recommend`, `/ai/search`, `/ai/feedback`, `/speech/transcribe` | Recommended/popular/new; assistant; tap-to-speak commands and dictation; device read-aloud | Real microphone, transcription, and speech playback on Android tablet |
+| Discovery and assistant | `POST /ai/recommend`, `/ai/search`, `/ai/feedback`, `/speech/transcribe` | Recommended/popular/new; assistant; reviewed English/Filipino voice commands, silence rejection, dictation, and device read-aloud | Real microphone and speech playback on Android tablet; recognition quality in the kiosk room |
 | Staff login | `POST /auth/login`, `GET /auth/me`, `POST /auth/logout` | Browser login and memory-only token | Expiry and role checks in browser |
 | Staff catalog | `GET/POST/PUT /books`, `GET/POST /books/{id}/copies`, QR endpoints | List, edit, copies, QR downloads | Covers, archiving, copy status, CSV import/export |
 | Staff users | `GET/POST/PUT /users`, `GET /users/{id}/qr` | List, registration/edit, status, QR download | Photo upload and history detail |

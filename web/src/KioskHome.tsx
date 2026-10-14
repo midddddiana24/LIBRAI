@@ -13,9 +13,10 @@ type Props = {
   onAssistant: () => void
   onDiscover: () => void
   onVoiceCommand: (text: string) => void
+  onHearInstructions: () => void
 }
 
-export default function KioskHome({ query, busy, online, onQuery, onSearch, onBorrow, onReturn, onAccount, onAssistant, onDiscover, onVoiceCommand }: Props) {
+export default function KioskHome({ query, busy, online, onQuery, onSearch, onBorrow, onReturn, onAccount, onAssistant, onDiscover, onVoiceCommand, onHearInstructions }: Props) {
   const unavailable = busy || online === false
 
   return <div className="kiosk-home">
@@ -41,7 +42,7 @@ export default function KioskHome({ query, busy, online, onQuery, onSearch, onBo
     </section>
 
     <section className="kiosk-explore" aria-label="Explore the library">
-      <div className="kiosk-voice-entry"><div><strong>Use your voice</strong><span>Say “borrow a book”, “return a book”, or “find history books”.</span></div><VoiceControl label="Voice command" disabled={unavailable} onTranscript={onVoiceCommand} /></div>
+      <div className="kiosk-voice-entry"><div><strong>Use your voice</strong><span>Say “borrow a book”, “return a book”, “manghiram ng libro”, or “find history books”.</span><button type="button" className="voice-instructions" onClick={onHearInstructions}>Hear instructions</button></div><VoiceControl label="Voice command" disabled={unavailable} confirmBeforeUse onTranscript={onVoiceCommand} /></div>
       <form className="kiosk-search" role="search" onSubmit={event => { event.preventDefault(); onSearch(query) }}>
         <label htmlFor="kiosk-home-search">Find a book</label>
         <div><input id="kiosk-home-search" value={query} onChange={event => onQuery(event.target.value)} placeholder="Search by title, author, or topic" /><button className="primary icon-button" disabled={unavailable}>{busy ? <LoaderCircle className="loading-spinner" aria-hidden="true" /> : <Search aria-hidden="true" />}<span>{busy ? 'Loading…' : 'Search'}</span></button></div>

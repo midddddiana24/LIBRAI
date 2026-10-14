@@ -12,7 +12,7 @@
     "android:sync": "node scripts/check-android-env.mjs && npm run build && cap sync android",
     "android:open": "cap open android",
     "test:ui-smoke": "node scripts/ui-smoke.mjs",
-    "test:voice": "node --test src/voiceCommands.test.mjs",
+    "test:voice": "node --test src/voiceCommands.test.mjs src/audioActivity.test.mjs",
     "test:voice-ui": "node scripts/voice-ui-smoke.mjs"
   },
   "dependencies": {

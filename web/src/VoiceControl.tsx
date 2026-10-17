@@ -116,7 +116,7 @@ export default function VoiceControl({ label, disabled = false, confirmBeforeUse
   }
 
   return <div className="voice-control">
-    <label>Speech language <select value={language} disabled={disabled || status !== 'idle'} onChange={event => setLanguage(event.target.value)}><option value="auto">English / Filipino (auto)</option><option value="en">English</option><option value="fil">Filipino</option></select></label>
+    <label><span className="voice-language-label">Speech language</span> <select value={language} disabled={disabled || status !== 'idle'} onChange={event => setLanguage(event.target.value)}><option value="auto">English / Filipino (auto)</option><option value="en">English</option><option value="fil">Filipino</option></select></label>
     <button type="button" className={status === 'listening' ? 'voice-button listening' : 'voice-button'} disabled={disabled || status === 'requesting' || status === 'transcribing'} onClick={status === 'listening' ? stop : () => void start()}>
       {status === 'listening' ? <Square aria-hidden="true" /> : status === 'requesting' || status === 'transcribing' ? <LoaderCircle className="loading-spinner" aria-hidden="true" /> : <Mic aria-hidden="true" />}
       <span>{status === 'listening' ? 'Stop recording' : status === 'requesting' ? 'Connecting microphone…' : status === 'transcribing' ? 'Transcribing…' : label}</span>

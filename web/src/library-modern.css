@@ -213,7 +213,7 @@ button svg { width: 20px; height: 20px; flex-shrink: 0; }
 }
 @media (min-width: 900px) and (max-height: 700px) and (orientation: landscape) {
   .kiosk .content:has(.kiosk-menu) { padding: 16px 24px; }
-  .kiosk-menu-screen { gap: var(--space-md); }
+  .kiosk-menu-screen { gap: var(--space-sm); }
   .kiosk-menu .kiosk-intro h1 { font-size: 2rem; }
   .kiosk-menu .kiosk-task { min-height: 134px; grid-template-rows: minmax(60px, 1fr) auto; padding: 12px 18px; gap: 6px; }
   .kiosk-menu .kiosk-task-hint { display: none; }
@@ -225,6 +225,9 @@ button svg { width: 20px; height: 20px; flex-shrink: 0; }
   .kiosk-menu .kiosk-quick-links { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .kiosk .kiosk-menu .kiosk-quick-links button { gap: 4px; padding: 8px 4px; font-size: var(--text-sm); }
   .kiosk .kiosk-menu .kiosk-quick-links button svg { width: 18px; height: 18px; }
+}
+@media (min-width: 600px) and (max-width: 899px) {
+  .kiosk-menu-screen { gap: var(--space-md); }
 }
 @media (max-width: 1100px) {
   .admin .metric { padding: 18px; }

@@ -34,7 +34,7 @@ try {
         : path === '/api/v1/auth/login' ? { access_token: 'layout-check-only', user: staff }
           : path === '/api/v1/auth/me' ? staff
             : path === '/api/v1/admin/dashboard' ? dashboard
-              : path === '/api/v1/ai/recommend' ? [book]
+              : path === '/api/v1/ai/recommend' ? [book, { ...book, id: 2, title: 'Second preview title' }]
                 : path === '/api/v1/books' || path === '/api/v1/search/books' ? { items: [book], total: 1 }
                   : path === '/api/v1/settings' ? { borrowing_limit: '3' }
                     : { items: [], total: 0 }
@@ -43,12 +43,24 @@ try {
     await page.goto(base)
     await page.getByRole('button', { name: 'Borrow a book', exact: true }).waitFor()
     await fits(page, width, height, width >= 600)
+    assert.equal(await page.locator('#kiosk-home-search').count(), 0)
+    const hear = await page.getByRole('button', { name: 'Hear instructions', exact: true }).boundingBox()
+    const voice = await page.getByRole('button', { name: 'Voice command', exact: true }).boundingBox()
+    if (width >= 600) assert.ok(voice.x > hear.x + hear.width, 'Voice command is to the right of instructions')
     assert.equal(await page.locator('.kiosk-menu-screen').evaluate(el => getComputedStyle(el).borderWidth), '0px')
     if (width === 768 || width === 1024) await snapshot(page, `modern-kiosk-${width}`)
     for (const [action, heading] of [['Borrow a book', 'Borrow a book'], ['Return a book', 'Return a book'], ['Find a book', 'Find a book'], ['Discover books', 'Explore titles']]) {
       await page.getByRole('button', { name: action, exact: true }).click()
       await page.getByRole('heading', { name: heading, exact: true }).waitFor()
       await fits(page, width, height)
+      if (action === 'Discover books') {
+        const grid = page.locator('.kiosk-discovery .book-grid')
+        assert.equal(await grid.locator('.book-card').count(), 2)
+        assert.ok(await grid.evaluate(el => parseFloat(getComputedStyle(el).gap) >= 24), 'Discovery cards have visible gaps')
+        const tabs = await page.locator('.kiosk-discovery .tabs').boundingBox()
+        const cards = await grid.boundingBox()
+        assert.ok(cards.y - (tabs.y + tabs.height) >= 24, 'Space separates discovery filters and cards')
+      }
       if (width === 768 && action === 'Borrow a book') await snapshot(page, 'modern-borrow-768')
       await page.getByRole('button', { name: 'End session', exact: true }).click()
     }

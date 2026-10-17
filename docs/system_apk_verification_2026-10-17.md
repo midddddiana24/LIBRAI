@@ -1,10 +1,12 @@
 # System and APK verification - 17 October 2026
 
+**Newer UI patch:** see [LIBRAI 1.6.2](release_1.6.2.md) for the updated home controls, discovery spacing and APK download. Earlier 1.6.1 results below remain a historical verification record.
+
 ## Decision
 
 The verified backend and browser workflows support a controlled library pilot. This is not a claim that every feature works on the intended Android tablet: no USB device was detected, and the user chose manual installation. The APK is signed for internal debug testing, not a production release build.
 
-The live website/API were checked at the published chatbot revision `7cfa077`. A tablet home-layout regression was found during this audit and corrected locally. The replacement APK is **1.6.1 / code 9**. The local layout correction has not been pushed or deployed in this audit.
+The initial live website/API check used chatbot revision `7cfa077`. A tablet home-layout regression was found and corrected. The replacement APK is **1.6.1 / code 9**. The subsequent user-authorized publication pushed the correction as `7165e3c`; Render now serves entry asset `index-CpHKJsjK.js` with the corrected voice markup.
 
 ## Current results
 
@@ -51,7 +53,15 @@ One intermediate layout run timed out waiting for an admin Menu click while the 
 1. Install 1.6.1 as an update on the actual intended tablet. No device was attached during these checks.
 2. Verify real English, Filipino and mixed-speech transcription in quiet and normal library noise; confirm audible speech and Stop reading.
 3. Verify real camera decoding, permissions and a designated test borrow/return on that tablet.
-4. Gmail transport/queue behavior passed isolated tests, and an earlier test was confirmed by the user. Inbox delivery and current deployed Gmail OAuth authorization were not retested during this audit. No email was sent.
-5. Publish the local layout correction when desired; the existing live deployment still has the layout regression at the affected viewport sizes.
+4. After explicit approval, one new sample QR email was sent to the sender's own authorized inbox using a temporary local member/database and the existing Gmail OAuth credentials. The worker recorded SENT after Gmail accepted it. Subject: **LIBRAI verification: sample library QR (not a real ID)**. The attachment is `library-id.png` and contains a fake ID. No live email backlog or library records were modified. The user confirmed receipt with `library-id.png` attached on 17 October 2026. This verifies delivery with the local OAuth credentials; it does not independently prove the deployed Render worker has the same credential file.
+5. The layout correction was published as `7165e3c`; public assets now include it. The live viewport checks are recorded in the follow-up below.
+
+## User-directed follow-up
+
+- Production signing: **skipped at the user's request**. No release keystore was created. Temporary signing configuration changes were reverted; the existing signed debug APK remains the delivery artifact.
+- Physical device: the user selected **manual testing**. No USB tablet was attached. Camera, microphone and audible speech still require their real-device result.
+- Gmail: exactly one approved test email accepted; the user confirmed inbox receipt with `library-id.png` attached on 17 October 2026. The sample QR is not a valid live library ID.
+- Live viewport acceptance: **passed** on the public Render website at 600x960, 768x1024 and 960x600. The home page fits without overflow, and its labeled language selector can be changed. The first check used an overly strict exact-text locator for the wrapping label; selecting the semantic combobox and checking its associated label completed successfully.
+- Follow-up API health: HTTP 200, healthy, database connected.
 
 No load test, exhaustive security review, Google Play release, physical Android acceptance or live admin sign-in was performed. Existing warnings: Starlette/httpx deprecation, local pip ignored-distribution metadata for `~let-desktop`, and Gradle flatDir warnings. These did not prevent the successful builds/tests above.

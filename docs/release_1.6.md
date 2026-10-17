@@ -1,6 +1,6 @@
 # LIBRAI 1.6 Android update
 
-**Newer patch available:** use `generated/releases/LIBRAI-1.6.1-debug.apk` (version 1.6.1/code 9) for the corrected tablet home layout. See [the current system/APK verification report](system_apk_verification_2026-10-17.md). The 1.6.0 details below are the earlier build record.
+**Newer patch available:** use [LIBRAI 1.6.2](release_1.6.2.md) (version 1.6.2/code 10) for the updated home controls and discovery spacing. The 1.6.0 details below are the earlier build record.
 
 Version **1.6.0**, Android version code **8**, package `ai.librai.kiosk`.
 API: `https://librai-api-free-pg.onrender.com/api/v1`.

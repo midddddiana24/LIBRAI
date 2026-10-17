@@ -47,6 +47,12 @@ button svg { width: 20px; height: 20px; flex-shrink: 0; }
 .kiosk-menu .kiosk-intro h1 { margin: 0 0 var(--space-xs); max-width: 850px; color: var(--color-ink); font-size: var(--text-display); line-height: 1.1; font-weight: 650; letter-spacing: -.035em; }
 .kiosk-menu .kiosk-intro p { margin: 0; color: var(--color-muted); font-size: var(--text-lg); }
 .hear-instructions { display: inline-flex; gap: var(--space-xs); align-items: center; min-height: 48px; flex-shrink: 0; padding: 10px 14px; font-size: var(--text-sm); background: var(--color-paper); }
+.kiosk-home-tools { display: flex; align-items: flex-start; gap: var(--space-sm); min-width: 0; }
+.kiosk-home-tools .voice-control { min-width: 0; max-width: 420px; }
+.kiosk-home-tools .voice-message:empty { display: none; }
+.kiosk-home-tools .voice-message, .kiosk-home-tools .voice-review { flex-basis: 100%; }
+.kiosk-discovery .tabs { gap: var(--space-sm); margin-block: var(--space-lg); }
+.kiosk-discovery .book-grid { gap: var(--space-lg); }
 .kiosk-menu .kiosk-task-grid { grid-column: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: dense; gap: var(--space-md); width: 100%; min-height: 340px; margin: 0; max-width: none; }
 .kiosk-menu .kiosk-task { --tile-ink: var(--color-ink); --tile-paper: var(--color-paper); --tile-accent: var(--color-book-blue); --tile-pop: var(--color-book-peach); display: grid; grid-template-rows: minmax(80px, 1fr) auto auto; justify-items: start; align-items: center; justify-content: stretch; gap: var(--space-xs); min-height: 170px; padding: 20px 24px; border: var(--rule-width) solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); color: var(--color-ink); box-shadow: none; text-align: left; }
 .kiosk-menu .kiosk-task-borrow { background: var(--color-blue-soft); border-color: var(--color-blue-soft); }
@@ -203,9 +209,8 @@ button svg { width: 20px; height: 20px; flex-shrink: 0; }
 .startup-track span { background: var(--color-accent); animation-timing-function: var(--ease-in-out); }
 
 @media (min-width: 900px) and (orientation: landscape) {
-  .kiosk-menu-screen { grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr); grid-template-rows: auto minmax(300px, 1fr); }
+  .kiosk-menu-screen { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(300px, 1fr) auto; }
   .kiosk-menu .kiosk-explore { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; justify-content: center; gap: var(--space-sm); padding: 0; border: 0; }
-  .kiosk-menu .kiosk-quick-links { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .kiosk-menu .kiosk-task-grid { min-height: 300px; }
   .kiosk-menu .kiosk-task { min-height: 145px; padding: 16px 20px; }
   .kiosk-menu .kiosk-task strong { font-size: clamp(1.2rem, 2vw, 1.65rem); }
@@ -219,7 +224,7 @@ button svg { width: 20px; height: 20px; flex-shrink: 0; }
   .kiosk-menu .kiosk-task-hint { display: none; }
   .kiosk-menu .kiosk-task-icon, .kiosk-menu .kiosk-task:nth-child(2) .kiosk-task-icon { width: 100px; height: 76px; }
   .kiosk-menu .kiosk-task-grid { min-height: 280px; }
-  .kiosk-menu-screen { grid-template-rows: auto minmax(280px, 1fr); }
+  .kiosk-menu-screen { grid-template-rows: auto minmax(280px, 1fr) auto; }
   .kiosk-menu .kiosk-voice-entry > div:not(.voice-control) > span { display: none; }
   .kiosk-menu .kiosk-search, .kiosk-menu .kiosk-voice-entry { padding: 12px; }
   .kiosk-menu .kiosk-quick-links { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
@@ -230,6 +235,7 @@ button svg { width: 20px; height: 20px; flex-shrink: 0; }
   .kiosk-menu-screen { gap: var(--space-md); }
 }
 @media (max-width: 1100px) {
+  .kiosk-menu .kiosk-intro { flex-direction: column; align-items: flex-start; }
   .admin .metric { padding: 18px; }
   .dashboard-workspace { grid-template-columns: minmax(0, 1fr); }
 }
@@ -266,6 +272,7 @@ button svg { width: 20px; height: 20px; flex-shrink: 0; }
   .login-card { width: min(100%, 460px); padding: var(--space-xl) var(--space-lg); }
 }
 @media (max-width: 599px) {
+  .kiosk-home-tools { flex-wrap: wrap; }
   .kiosk-menu-screen { grid-template-rows: auto minmax(340px, 1fr) auto; gap: var(--space-lg); }
   .kiosk-menu .kiosk-intro { flex-wrap: wrap; }
   .kiosk-menu .kiosk-explore { grid-template-columns: minmax(0, 1fr); }
@@ -293,6 +300,18 @@ button svg { width: 20px; height: 20px; flex-shrink: 0; }
   .admin .search-form { flex-wrap: wrap; }
   .admin .search-form input { width: 100%; }
   .admin .pagination { flex-wrap: wrap; gap: var(--space-xs); }
+}
+@media (min-width: 900px) and (max-width: 1100px) and (orientation: landscape) {
+  .kiosk-menu .kiosk-intro { flex-direction: row; align-items: center; }
+  .kiosk-menu .kiosk-intro h1 { font-size: 1.65rem; }
+  .kiosk-home-tools { flex-shrink: 0; }
+  .kiosk-menu .kiosk-task-icon, .kiosk-menu .kiosk-task:nth-child(2) .kiosk-task-icon { width: 120px; height: 90px; }
+}
+@media (min-width: 900px) and (max-height: 700px) and (orientation: landscape) {
+  .kiosk-menu .kiosk-intro { flex-direction: row; align-items: center; }
+  .kiosk-menu .kiosk-intro h1 { font-size: 1.65rem; }
+  .kiosk-home-tools { flex-shrink: 0; }
+  .kiosk-menu .kiosk-task-icon, .kiosk-menu .kiosk-task:nth-child(2) .kiosk-task-icon { width: 100px; height: 76px; }
 }
 @media (prefers-reduced-motion: reduce) {
   button, .kiosk-menu .kiosk-task, .kiosk-menu .kiosk-task-icon { transition: none; }

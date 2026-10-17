@@ -1,4 +1,4 @@
-import { ArrowUpRight, AudioLines, LoaderCircle, Search, Volume2, UserRoundPlus } from 'lucide-react'
+import { ArrowUpRight, Volume2, UserRoundPlus } from 'lucide-react'
 import LibraryActionIcon from './LibraryActionIcon'
 import KioskTileArt from './KioskTileArt'
 import VoiceControl from './VoiceControl'
@@ -7,7 +7,6 @@ type Props = {
   query: string
   busy: boolean
   online: boolean | null
-  onQuery: (value: string) => void
   onSearch: (query: string) => void
   onBorrow: () => void
   onReturn: () => void
@@ -19,14 +18,17 @@ type Props = {
   onHearInstructions: () => void
 }
 
-export default function KioskHome({ query, busy, online, onQuery, onSearch, onBorrow, onReturn, onRegister, onAccount, onAssistant, onDiscover, onVoiceCommand, onHearInstructions }: Props) {
+export default function KioskHome({ query, busy, online, onSearch, onBorrow, onReturn, onRegister, onAccount, onAssistant, onDiscover, onVoiceCommand, onHearInstructions }: Props) {
   const unavailable = busy || online === false
 
   return <div className="kiosk-home kiosk-menu">
     <div className="kiosk-menu-screen">
       <section className="kiosk-intro" aria-labelledby="kiosk-intro-title">
         <div><h1 id="kiosk-intro-title">Welcome to your library.</h1><p>What would you like to do today?</p></div>
-        <button className="hear-instructions" type="button" onClick={onHearInstructions}><Volume2 aria-hidden="true" /><span>Hear instructions</span></button>
+        <div className="kiosk-home-tools">
+          <button className="hear-instructions" type="button" onClick={onHearInstructions}><Volume2 aria-hidden="true" /><span>Hear instructions</span></button>
+          <VoiceControl label="Voice command" disabled={unavailable} confirmBeforeUse onTranscript={onVoiceCommand} />
+        </div>
       </section>
 
       <section className="kiosk-task-grid" aria-label="Library services">
@@ -52,17 +54,10 @@ export default function KioskHome({ query, busy, online, onQuery, onSearch, onBo
         </button>
       </section>
 
-      <section className="kiosk-explore" aria-label="More ways to use the library">
-        <form className="kiosk-search" role="search" onSubmit={event => { event.preventDefault(); onSearch(query) }}>
-          <label htmlFor="kiosk-home-search">Search the catalog</label>
-          <div><input id="kiosk-home-search" value={query} onChange={event => onQuery(event.target.value)} placeholder="Title, author, or topic" /><button className="primary icon-button" disabled={unavailable}>{busy ? <LoaderCircle className="loading-spinner" aria-hidden="true" /> : <Search aria-hidden="true" />}<span>{busy ? 'Loading...' : 'Search'}</span></button></div>
-        </form>
-        <div className="kiosk-voice-entry"><AudioLines className="voice-dock-icon" aria-hidden="true" /><div><strong>A little help, just ask.</strong><span>Speak in English or Filipino.</span></div><VoiceControl label="Voice command" disabled={unavailable} confirmBeforeUse onTranscript={onVoiceCommand} /></div>
-        <div className="kiosk-quick-links">
+      <section className="kiosk-quick-links" aria-label="More ways to use the library">
           <button disabled={unavailable} onClick={onRegister}><UserRoundPlus aria-hidden="true" />Register</button>
           <button disabled={unavailable} onClick={onAccount}><LibraryActionIcon kind="account" />My account</button>
           <button disabled={unavailable} onClick={onAssistant}><LibraryActionIcon kind="assistant" />Ask LIBRAI</button>
-        </div>
       </section>
     </div>
   </div>

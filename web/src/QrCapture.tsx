@@ -28,7 +28,8 @@ export function QrCapture({ label, busy, onToken }: Props) {
   }
 
   return <div className="scan-panel">
-    <button className="primary large icon-button" type="button" onClick={scan} disabled={busy || scanning}>{scanning ? <LoaderCircle className="loading-spinner" aria-hidden="true" /> : <Camera aria-hidden="true" />}<span>{scanning ? 'Opening camera…' : `Open camera to scan ${label}`}</span></button>
+    <div className="scan-visual" aria-hidden="true"><ScanQrCode /><span>Ready to scan</span></div>
+    <button className="primary large icon-button" type="button" onClick={scan} aria-label={scanning ? 'Opening camera' : `Open camera to scan ${label}`} disabled={busy || scanning}>{scanning ? <LoaderCircle className="loading-spinner" aria-hidden="true" /> : <Camera aria-hidden="true" />}<span>{scanning ? 'Opening camera…' : 'Open camera'}</span></button>
     <p className="muted">Allow camera access when your tablet asks. Your QR is verified by the library server.</p>
     <form onSubmit={(event) => { event.preventDefault(); if (manual.trim()) { onToken(manual.trim()); setManual('') } }}>
       <label htmlFor={`manual-${label}`}>Use a USB scanner or enter the QR value</label>

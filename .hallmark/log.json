@@ -1,5 +1,16 @@
 [
   {
+    "date": "2026-10-17",
+    "scope": "app",
+    "genre": "modern-minimal",
+    "macrostructure": "Workbench",
+    "theme": "Cobalt service desk",
+    "nav": "edge-aligned kiosk bar and staff side rail",
+    "footer": "inline service help",
+    "enrichment": "original book SVGs; generated tablet concepts kept as references",
+    "brief": "Modern full-viewport tablet kiosk and responsive staff workspace, preserving library workflows"
+  },
+  {
     "date": "2026-10-14",
     "macrostructure": "terminal task board",
     "theme": "Quiet",

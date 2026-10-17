@@ -5,6 +5,10 @@ import './kiosk-reference.css'
 import './voice.css'
 import './library-refresh.css'
 import './kiosk-tile-menu.css'
+import '@fontsource-variable/outfit'
+import '@fontsource-variable/source-sans-3/wght.css'
+import '../../tokens.css'
+import './library-modern.css'
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(

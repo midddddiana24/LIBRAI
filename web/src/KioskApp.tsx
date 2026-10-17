@@ -9,6 +9,7 @@ import { BorrowFlow, ReturnFlow } from './KioskTransaction'
 import StartupScreen from './StartupScreen'
 import VoiceControl from './VoiceControl'
 import { resolveVoiceCommand } from './voiceCommands'
+import useScreenMotion from './useScreenMotion'
 
 type View = 'home' | 'search' | 'detail' | 'borrow' | 'return' | 'account' | 'assistant' | 'discover'
 const SESSION_TIMEOUT_MS = 90_000
@@ -39,6 +40,8 @@ export default function KioskApp() {
   const lastActivity = useRef(0)
   const [secondsLeft, setSecondsLeft] = useState(90)
   const [sessionKey, setSessionKey] = useState(0)
+  const screenRef = useRef<HTMLDivElement>(null)
+  useScreenMotion(screenRef, `${starting}-${view}-${sessionKey}`)
 
   const endSession = useCallback(() => {
     window.speechSynthesis?.cancel()
@@ -200,7 +203,7 @@ export default function KioskApp() {
 
   if (starting) return <StartupScreen />
 
-  return <div className="app kiosk">
+  return <div className="app kiosk" ref={screenRef}>
     <header className="topbar"><div className="brand"><img className="brand-mark" src="/images/librai-symbol.png" alt="" /><span><strong>LIBRAI</strong><small>Library kiosk</small></span></div><div className="top-actions"><span className={`status ${online ? 'good' : 'bad'}`}>{online === null ? 'Connecting' : online ? 'Library online' : 'Library offline'}</span><button type="button" onClick={endSession}>End session</button></div></header>
     {busy && <div className="kiosk-activity" role="status" aria-live="polite"><LoaderCircle className="loading-spinner" aria-hidden="true" /><span>Working with the library…</span></div>}
     <main className="content" aria-busy={busy}>

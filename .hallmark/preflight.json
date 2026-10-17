@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-17",
+  "framework": "Vite React TypeScript in web/",
+  "sources": [
+    "web/package.json",
+    "web/src/main.tsx",
+    "web/src/KioskHome.tsx",
+    "web/src/AdminApp.tsx",
+    "web/src/library-refresh.css",
+    "web/src/kiosk-tile-menu.css"
+  ],
+  "existing": "Four-tile tablet menu and staff dashboard, layered CSS, no design.md before this run",
+  "fonts": "Previous Segoe UI; now local Outfit and Source Sans 3",
+  "palette": "Shared tokens.css replaces teal presentation with cobalt, navy, cool paper",
+  "motion": "Previous CSS feedback; added scoped GSAP view-entry and reduced-motion support",
+  "scope": "Visual layer and mobile staff navigation; existing API contracts retained"
+}

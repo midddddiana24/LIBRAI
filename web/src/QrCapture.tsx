@@ -13,9 +13,12 @@ export function QrCapture({ label, busy, onToken, presentation = 'default' }: Pr
     setError('')
     setScanning(true)
     try {
-      const { CapacitorBarcodeScanner, CapacitorBarcodeScannerTypeHint } = await import('@capacitor/barcode-scanner')
+      const { CapacitorBarcodeScanner, CapacitorBarcodeScannerTypeHint, CapacitorBarcodeScannerCameraDirection, CapacitorBarcodeScannerAndroidScanningLibrary } = await import('@capacitor/barcode-scanner')
       const result = await CapacitorBarcodeScanner.scanBarcode({
         hint: CapacitorBarcodeScannerTypeHint.QR_CODE,
+        cameraDirection: CapacitorBarcodeScannerCameraDirection.BACK,
+        // ML Kit decoded the physical test QR on the Infinix; the default engine did not.
+        android: { scanningLibrary: CapacitorBarcodeScannerAndroidScanningLibrary.MLKIT },
         scanInstructions: `Scan ${label}`,
         cancelButtonAccessibilityLabel: 'Cancel QR scan',
       })

@@ -29,7 +29,7 @@ cd android
 ./gradlew.bat assembleDebug
 ```
 
-The debug APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. The current local build is version **1.5** (`versionCode 6`) and contains `https://librai-api-free-pg.onrender.com/api/v1`. Installing an updated APK replaces the old app only when Android accepts the same package and signing key; the website redeploy does not update an installed APK. This is a development build. A release APK/AAB needs a signing key and device testing. Do not commit the signing key. A production Android build is blocked by `scripts/check-android-env.mjs` unless the API URL is HTTPS and ends in `/api/v1`.
+The debug APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. The current local build is version **1.5.1** (`versionCode 7`) and contains `https://librai-api-free-pg.onrender.com/api/v1`. Installing an updated APK replaces the old app only when Android accepts the same package and signing key; the website redeploy does not update an installed APK. This is a development build. A release APK/AAB needs a signing key and device testing. Do not commit the signing key. A production Android build is blocked by `scripts/check-android-env.mjs` unless the API URL is HTTPS and ends in `/api/v1`.
 
 For a public server and admin site, follow [the hosting guide](../docs/public_hosting.md) before building an APK for distribution.
 

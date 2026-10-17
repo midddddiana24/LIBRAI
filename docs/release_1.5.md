@@ -1,8 +1,17 @@
 # LIBRAI 1.5 delivery and tablet acceptance
 
-Version: **1.5**, Android version code **6**, package `ai.librai.kiosk`.
+Current version: **1.5.1**, Android version code **7**, package `ai.librai.kiosk`.
 API: `https://librai-api-free-pg.onrender.com/api/v1`.
 Source branch: `online-admin-postgres`.
+
+## Publication and physical-device follow-up
+
+- Release source commit `12fa2a2` was pushed to `online-admin-postgres` and verified against the remote branch.
+- The public website subsequently served the new Borrow layout and the exact new logo. Verified entry asset: `index-DnjeATiA.js`.
+- The public API returned healthy/database connected. A bounded check using invalid recommendation payloads returned thirty HTTP 422 responses, then HTTP 429 with `Retry-After: 60`, proving the new recommendation request limit was deployed. No model call or catalog/circulation write was made by that probe.
+- On the connected Infinix X6531, the user dictated **Romance**, the app displayed **Heard: Romance** and an AI answer, and the user confirmed the answer was audible through **Read answer aloud**.
+- The default Android scanner opened but did not decode the physical test QR. A diagnostic using the installed plugin's ML Kit engine decoded the **exact test value** successfully on the same physical device. Version 1.5.1/code 7 now selects ML Kit explicitly and has been installed successfully; the normal Borrow-screen retest is tracked below.
+- [Camera test QR](design_previews/camera-test-qr.png) contains `LIBRAI_CAMERA_CHECK_NOT_A_REAL_LIBRARY_ID`. It is deliberately not a real ID or book grant; successful scanning should lead to a server validation error, never a borrowing.
 
 ## Included
 
@@ -17,15 +26,15 @@ The dependencies in `requirements.txt` installed in a new temporary environment 
 
 ## APK
 
-Build completed: `BUILD SUCCESSFUL in 1m 58s`. Commands: `npm run android:sync`, then `gradlew.bat assembleDebug`.
+Latest build completed: `BUILD SUCCESSFUL in 26s`. Commands: `npm run android:sync`, then `gradlew.bat assembleDebug`.
 
-- Artifact: `web/android/app/build/outputs/apk/debug/app-debug.apk` (39,866,054 bytes).
-- SHA-256: `859a28c43fbed487d22a425bc2063ff4594fdc7b48ab950f9c77b1c15d588913`.
-- `aapt dump badging`: `ai.librai.kiosk`, version 1.5/code 6, minimum Android API 26, target API 36, camera and microphone permissions declared.
+- Artifact: `web/android/app/build/outputs/apk/debug/app-debug.apk` (39,866,166 bytes).
+- SHA-256: `7b17590c1628114da75c207c801b29227a1eab9e19e9aa6fb50451eed33cf641`.
+- `aapt dump badging`: `ai.librai.kiosk`, version 1.5.1/code 7, minimum Android API 26, target API 36, camera and microphone permissions declared.
 - `apksigner verify`: passed, Android Debug signing certificate. This is an internal testing APK, not a Play Store release build.
 - APK ZIP checks confirmed the current HTTPS API, `borrow-stages`, and the exact new transparent logo asset.
 
-## Physical tablet checks — pending
+## Physical acceptance procedure
 
 An Infinix X6531 was subsequently connected by USB. `adb install -r` returned **Success**, and the installed package reports **1.5 / code 6**. LIBRAI launched on its 720x1600 screen. At the first test, both Wi-Fi and mobile data were off and the app correctly showed the connection-lost message; live audio/QR checks are pending an internet connection. No device serial number is stored here. These checks must not be marked complete based on browser simulations or a successful build.
 

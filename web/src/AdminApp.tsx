@@ -179,7 +179,7 @@ export default function AdminApp() {
 
   if (!admin) return <div className="login-page" ref={screenRef}>
     <div className="login-intro">
-      <div className="brand"><img className="brand-mark" src="/images/librai-symbol.png" alt="" /><span><strong>LIBRAI</strong><small>Library administration</small></span></div>
+      <div className="brand"><img className="brand-mark" src="/images/librai-symbol-v2.png" alt="" /><span><strong>LIBRAI</strong><small>Library administration</small></span></div>
       <div className="login-message"><h2>A clear view of your library.</h2><p>Your catalog, readers, and daily circulation. All in one workspace.</p></div>
       <div className="login-illustration" aria-hidden="true"><KioskTileArt kind="discover" /></div>
       <span className="login-intro-foot">Built around the way your library works.</span>
@@ -196,7 +196,7 @@ export default function AdminApp() {
 
   return <div className="app admin" ref={screenRef}>
     <aside className={`sidebar ${navOpen ? 'nav-open' : ''}`}>
-      <div className="sidebar-top"><div className="brand"><img className="brand-mark" src="/images/librai-symbol.png" alt="" /><span><strong>LIBRAI</strong><small>Staff workspace</small></span></div>
+      <div className="sidebar-top"><div className="brand"><img className="brand-mark" src="/images/librai-symbol-v2.png" alt="" /><span><strong>LIBRAI</strong><small>Staff workspace</small></span></div>
         <button className="sidebar-toggle" aria-expanded={navOpen} aria-controls="staff-navigation" onClick={() => setNavOpen(!navOpen)}>{navOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}<span>{navOpen ? 'Close menu' : 'Menu'}</span></button>
       </div>
       <nav id="staff-navigation" aria-label="Admin sections">{sections.filter(item => item.id !== 'settings' || admin.role === 'SUPER_ADMIN').map(item => {

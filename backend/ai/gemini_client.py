@@ -33,7 +33,9 @@ class GeminiClient:
     def rank(self, query: str, candidates: list[dict]) -> GeminiRanking | None:
         if not candidates: return None
         if settings.tokenrouter_api_key:
-            return self._rank_tokenrouter(query, candidates)
+            ranked = self._rank_tokenrouter(query, candidates)
+            if ranked is not None:
+                return ranked
         if not settings.gemini_api_key: return None
         safe = [{"book_id": b["id"], "title": b["title"], "author": b["author"], "category": b.get("category"), "description": b.get("description"), "keywords": b.get("keywords", []), "available_copies": b.get("available_copies"), "shelf_location": b.get("shelf_location")} for b in candidates]
         cache_key = json.dumps({"query": query.strip().lower(), "catalog": safe}, sort_keys=True, default=str)

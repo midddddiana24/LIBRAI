@@ -29,7 +29,7 @@ cd android
 ./gradlew.bat assembleDebug
 ```
 
-The debug APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. The current local build is version **1.1** (`versionCode 2`) and contains `https://librai-api-free-pg.onrender.com/api/v1`. Installing an updated APK replaces the old app only when Android accepts the same package and signing key; the website redeploy does not update an installed APK. This is a development build. A release APK/AAB needs a signing key and device testing. Do not commit the signing key. A production Android build is blocked by `scripts/check-android-env.mjs` unless the API URL is HTTPS and ends in `/api/v1`.
+The debug APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. The current local build is version **1.5** (`versionCode 6`) and contains `https://librai-api-free-pg.onrender.com/api/v1`. Installing an updated APK replaces the old app only when Android accepts the same package and signing key; the website redeploy does not update an installed APK. This is a development build. A release APK/AAB needs a signing key and device testing. Do not commit the signing key. A production Android build is blocked by `scripts/check-android-env.mjs` unless the API URL is HTTPS and ends in `/api/v1`.
 
 For a public server and admin site, follow [the hosting guide](../docs/public_hosting.md) before building an APK for distribution.
 
@@ -37,4 +37,4 @@ Use `npm run android:open` to open the native project in Android Studio if it is
 
 ## Current verification boundary
 
-The web build, voice command and silence tests, mocked browser voice flow, and Android debug compilation pass locally. A generated speech sample transcribed successfully through the revised backend code. The currently deployed API still needs this backend revision before that longer speech timeout is live. Camera scanning, speech recognition quality and read-aloud on the physical tablet, device install, signing, and simultaneous kiosks still need checks. Use `npm run test:voice` for command and silence tests.
+The frontend build, command/audio tests, simulated browser voice flow, Borrow UI checks, and Android debug compilation pass locally. The backend also passed all 37 tests in a new environment installed from `requirements.txt`. Live Gemini recommendation and generated-speech transcription checks passed. Android 1.5/code 6 was installed on the connected Infinix X6531; physical audio/QR acceptance and public deployment status are tracked in [the release checklist](../docs/release_1.5.md). A successful build or GitHub push does not prove those checks passed.

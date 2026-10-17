@@ -8,6 +8,15 @@ from backend.core.database import Base,get_db
 from backend.core.security import hash_password
 from backend.main import app
 from backend.models.entities import Admin,Book,BookCopy,Category,CopyStatus,User
+from backend.core.config import settings
+
+
+@pytest.fixture(autouse=True)
+def isolate_external_services(monkeypatch):
+    # Unit tests must not inherit real cloud storage or paid AI credentials.
+    monkeypatch.setattr(settings, "media_bucket", None)
+    monkeypatch.setattr(settings, "gemini_api_key", None)
+    monkeypatch.setattr(settings, "tokenrouter_api_key", None)
 
 @pytest.fixture()
 def db_factory(tmp_path):

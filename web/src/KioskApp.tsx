@@ -204,7 +204,7 @@ export default function KioskApp() {
   if (starting) return <StartupScreen />
 
   return <div className="app kiosk" ref={screenRef}>
-    <header className="topbar"><div className="brand"><img className="brand-mark" src="/images/librai-symbol.png" alt="" /><span><strong>LIBRAI</strong><small>Library kiosk</small></span></div><div className="top-actions"><span className={`status ${online ? 'good' : 'bad'}`}>{online === null ? 'Connecting' : online ? 'Library online' : 'Library offline'}</span><button type="button" onClick={endSession}>End session</button></div></header>
+    <header className="topbar"><div className="brand"><img className="brand-mark" src="/images/librai-symbol-v2.png" alt="" /><span><strong>LIBRAI</strong><small>Library kiosk</small></span></div><div className="top-actions"><span className={`status ${online ? 'good' : 'bad'}`}>{online === null ? 'Connecting' : online ? 'Library online' : 'Library offline'}</span><button type="button" onClick={endSession}>End session</button></div></header>
     {busy && <div className="kiosk-activity" role="status" aria-live="polite"><LoaderCircle className="loading-spinner" aria-hidden="true" /><span>Working with the library…</span></div>}
     <main className="content" aria-busy={busy}>
       {online === false && <div className="connection-banner" role="alert"><div><strong>Library connection lost</strong><span>Borrowing, returns, and catalog updates need the server. Check the tablet connection.</span></div><button onClick={() => void health().then(setOnline)}>Try again</button></div>}

@@ -1,4 +1,5 @@
 from fastapi import APIRouter,File,HTTPException,UploadFile
+from starlette.concurrency import run_in_threadpool
 from backend.ai.gemini_client import gemini_client
 from backend.core.config import settings
 router=APIRouter(prefix="/speech",tags=["Speech"])
@@ -12,6 +13,6 @@ async def transcribe(audio:UploadFile=File(...)):
     # Browsers and recorders commonly label WAV as audio/x-wav. Gemini accepts
     # the standard audio/wav MIME value more consistently.
     mime_type = "audio/wav" if audio.content_type in {"audio/x-wav", "audio/wave", "audio/vnd.wave"} else audio.content_type
-    text=gemini_client.transcribe(content,mime_type)
+    text=await run_in_threadpool(gemini_client.transcribe,content,mime_type)
     if not text:raise HTTPException(502,"The speech service could not transcribe that recording. Please try again.")
     return {"text":text}

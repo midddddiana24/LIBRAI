@@ -104,7 +104,7 @@ button svg { width: 20px; height: 20px; flex-shrink: 0; }
 .admin .sidebar { position: sticky; top: 0; display: flex; flex-direction: column; width: 232px; height: 100dvh; min-height: 0; padding: var(--space-xl) var(--space-md) var(--space-md); gap: var(--space-xl); background: var(--color-sidebar); color: var(--color-on-dark); }
 .sidebar-top { min-width: 0; }
 .admin .sidebar .brand { padding: 0 var(--space-xs); color: var(--color-on-dark); }
-.admin .sidebar .brand-mark { width: 38px; height: 38px; }
+.admin .sidebar .brand-mark { width: 38px; height: 38px; filter: brightness(0) invert(1); }
 .admin .sidebar .brand strong { font-size: 1.25rem; }
 .admin .sidebar .brand small { color: var(--color-sidebar-muted); font-size: var(--text-sm); }
 .admin .sidebar nav { display: flex; flex-direction: column; gap: 5px; min-height: 0; overflow-y: auto; overflow-x: clip; padding: 0; }

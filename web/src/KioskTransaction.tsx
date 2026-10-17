@@ -1,5 +1,8 @@
 import type { ActiveBorrowing, BookGrant, BorrowReceipt, ReturnReceipt, UserGrant } from './api'
 import { QrCapture } from './QrCapture'
+import { ArrowLeft, Check, LoaderCircle, ShieldCheck } from 'lucide-react'
+import { BorrowScanArt } from './BorrowScanArt'
+import './borrow-screen.css'
 
 const date = (value?: string) => value ? new Date(value).toLocaleString() : '—'
 
@@ -28,14 +31,44 @@ type BorrowProps = {
   onFinish: () => void
 }
 
+function BorrowStepSummary({ number, title, detail, kind, complete = false, onChange, busy }: {
+  number: number; title: string; detail: string; kind: 'id' | 'book' | 'confirm'; complete?: boolean; onChange?: () => void; busy: boolean
+}) {
+  return <section className={`borrow-step-summary${complete ? ' is-complete' : ''}`}>
+    <span className="borrow-step-number" aria-label={complete ? `Step ${number} complete` : `Step ${number}`}>{complete ? <Check aria-hidden="true" /> : number}</span>
+    <div><h2>{title}</h2><p>{detail}</p></div>
+    {onChange ? <button type="button" className="borrow-change" aria-label={`Change ${kind === 'id' ? 'library ID' : 'book'}`} onClick={onChange} disabled={busy}>Change</button> : <BorrowScanArt kind={kind} />}
+  </section>
+}
+
 export function BorrowFlow({ user, copy, receipt, busy, onUser, onBook, onChangeUser, onChangeBook, onConfirm, onFinish }: BorrowProps) {
   const step = receipt ? 3 : !user ? 0 : !copy ? 1 : 2
-  return <TransactionShell title="Borrow a book" intro="Follow the steps to check out one copy." step={step} labels={['Library ID', 'Book QR', 'Review', 'Done']} onCancel={onFinish}>
-    {receipt ? <div className="transaction-result" role="status"><span className="result-symbol" aria-hidden="true">✓</span><h2>Borrowing complete</h2><p>{receipt.book_title}</p><div className="receipt-detail"><span>Due date</span><strong>{date((receipt as BorrowReceipt).due_at)}</strong></div><button className="primary large" onClick={onFinish}>Finish and clear session</button></div>
-      : !user ? <><p className="step-kicker">Step 1 of 3</p><h2>Scan your library ID</h2><p className="muted">Hold the QR code on your library ID in front of the tablet camera.</p><QrCapture key="user-scan" label="your library ID" busy={busy} onToken={onUser} /></>
-        : !copy ? <><p className="step-kicker">Step 2 of 3</p><h2>Scan the book copy</h2><p className="verified">Library ID verified: {user.display_name || user.name || user.student_id}</p><QrCapture key="book-scan" label="the book QR" busy={busy} onToken={onBook} /><button className="text-button" onClick={onChangeUser}>Use a different library ID</button></>
-          : <><p className="step-kicker">Step 3 of 3</p><h2>Review your borrowing</h2><div className="review-list"><div><span>Library user</span><strong>{user.display_name || user.name || user.student_id}</strong></div><div><span>Book</span><strong>{copy.title}</strong></div><div><span>Copy</span><strong>{copy.accession_number}</strong></div></div><p className="muted">The library server checks availability and assigns the due date after confirmation.</p>{!copy.available && <p className="alert error">This copy is unavailable. Scan another copy.</p>}<div className="transaction-buttons"><button onClick={onChangeBook}>Scan another book</button><button className="primary large" disabled={!copy.available || busy} onClick={onConfirm}>{busy ? 'Processing…' : 'Confirm borrowing'}</button></div></>}
-  </TransactionShell>
+  const userName = user?.display_name || user?.name || user?.student_id || ''
+  return <div className="transaction-page borrow-page">
+    <div className="page-heading"><div><h1>Borrow a book</h1><p>Scan your library ID, then your book.</p></div></div>
+    <Progress labels={['Library ID', 'Book QR', 'Confirm']} current={step} />
+    <div className="borrow-stages">
+      {receipt ? <section className="borrow-stage borrow-receipt" role="status">
+        <BorrowScanArt kind="confirm" />
+        <div><p className="borrow-complete"><Check aria-hidden="true" /> All done</p><h2>Borrowing complete</h2><p>{receipt.book_title}</p><div className="receipt-detail"><span>Due date</span><strong>{date((receipt as BorrowReceipt).due_at)}</strong></div><button className="primary large" onClick={onFinish}>Finish and clear session</button></div>
+      </section> : <>
+        {user ? <BorrowStepSummary number={1} title="Library ID verified" detail={userName} kind="id" complete onChange={onChangeUser} busy={busy} /> : <section className="borrow-stage" aria-labelledby="borrow-id-heading">
+          <BorrowScanArt kind="id" />
+          <div className="borrow-stage-controls"><h2 id="borrow-id-heading" tabIndex={-1}>Scan your library ID</h2><QrCapture key="user-scan" label="your library ID" busy={busy} onToken={onUser} presentation="borrow" /></div>
+        </section>}
+        {!user ? <BorrowStepSummary number={2} title="Scan a book" detail="Scan your library ID first." kind="book" busy={busy} />
+          : !copy ? <section className="borrow-stage" aria-labelledby="borrow-book-heading">
+            <BorrowScanArt kind="book" />
+            <div className="borrow-stage-controls"><h2 id="borrow-book-heading" tabIndex={-1}>Scan a book</h2><QrCapture key="book-scan" label="the book" busy={busy} onToken={onBook} presentation="borrow" /></div>
+          </section> : <BorrowStepSummary number={2} title="Book scanned" detail={copy.title} kind="book" complete onChange={onChangeBook} busy={busy} />}
+        {!user || !copy ? <BorrowStepSummary number={3} title="Confirm and borrow" detail={user ? 'Scan a book first.' : 'Scan your library ID and a book first.'} kind="confirm" busy={busy} /> : <section className="borrow-stage borrow-review" aria-labelledby="borrow-review-heading">
+          <BorrowScanArt kind="confirm" />
+          <div><h2 id="borrow-review-heading" tabIndex={-1}>Review your borrowing</h2><div className="review-list"><div><span>Library user</span><strong>{userName}</strong></div><div><span>Book</span><strong>{copy.title}</strong></div><div><span>Copy</span><strong>{copy.accession_number}</strong></div></div><p className="muted">The library server checks availability and assigns the due date after confirmation.</p>{!copy.available && <p role="alert" className="alert error">This copy is unavailable. Scan another copy.</p>}<button className="primary large icon-button" disabled={!copy.available || busy} onClick={onConfirm}>{busy && <LoaderCircle className="loading-spinner" aria-hidden="true" />}{busy ? 'Processing…' : 'Confirm borrowing'}</button></div>
+        </section>}
+      </>}
+    </div>
+    <div className="borrow-footer"><button type="button" className="icon-button" onClick={onFinish} disabled={busy}><ArrowLeft aria-hidden="true" />Home</button><p><ShieldCheck aria-hidden="true" />Your session clears when you finish.</p></div>
+  </div>
 }
 
 type ReturnProps = {

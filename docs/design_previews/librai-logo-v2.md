@@ -1,0 +1,9 @@
+# LIBRAI logo: open book + L
+
+Generated with the built-in Imagegen tool on 17 October 2026, after selecting recommendation 1. The master is [librai-symbol-v2.png](../../web/public/images/librai-symbol-v2.png), a 1254x1254 RGBA PNG with actual transparency. The original `librai-symbol.png` is preserved.
+
+The kiosk header, startup screen, admin login/sidebar, favicon, and initial HTML startup screen use the new filename. The admin sidebar renders the symbol white with a CSS filter for contrast. The generated raster is not an SVG master. Android version 1.5/code 6 also uses the new symbol for the adaptive launcher and native splash. See `docs/release_1.5.md` for build and physical-device status.
+
+## Generation prompt
+
+Create ONE final professional logo symbol for LIBRAI, a school library self-service kiosk and staff administration app. Icon only, no words, no labels, no standalone typography. Concept selected by the client: an unmistakable open book whose central spine and lower page geometry subtly form an L. Make the L part of the book construction rather than a letter printed on a page. Two bold clean page silhouettes, balanced generous negative space, softly rounded precise corners, confident modern institutional identity. Flat vector-like graphic, solid cobalt blue #2456E8 and deep navy #10254A only. Strong simple silhouette, intentional small optical asymmetry for the L, clear and recognizable at 24–48 pixel header size. Center the single symbol with modest clear padding, occupy about 78 percent of a square image, genuinely transparent background with alpha. No surrounding square, tile, circle, shield or badge. No gradients, shading, shadows, 3D, texture, gold, sparkles, circuit patterns, brain, robot, mockup, presentation board, watermark, extra symbols, or text. This is a new logo asset, not a screenshot.

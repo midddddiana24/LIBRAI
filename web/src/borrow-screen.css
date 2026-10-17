@@ -1,0 +1,74 @@
+/* Reference: docs/design_previews/modern-borrow-concept.png.
+ * Existing design tokens, three real transaction steps, no simulated QR codes. */
+.kiosk .content:has(.borrow-page) { max-width: 1180px; min-height: calc(100dvh - 76px); padding: clamp(20px, 3vw, 40px); }
+.kiosk:has(.borrow-page) { background: var(--color-paper); }
+.kiosk:has(.borrow-page) > footer { display: none; }
+.borrow-page { max-width: 1000px; margin-inline: auto; }
+.borrow-page .page-heading { margin-bottom: var(--space-xl); }
+.kiosk .borrow-page .page-heading h1 { font-size: clamp(2.2rem, 6.5vw, 3.5rem); font-weight: 700; letter-spacing: -.035em; margin: 0 0 var(--space-xs); }
+.borrow-page .page-heading p { font-size: clamp(1.1rem, 2.4vw, 1.5rem); }
+.borrow-page .transaction-progress { gap: 0; margin: 0 0 var(--space-xl); }
+.borrow-page .transaction-progress li { position: relative; flex-direction: column; gap: var(--space-xs); padding: 0; font-size: var(--text-lg); z-index: 0; text-align: center; }
+.borrow-page .transaction-progress li:not(:last-child)::after { content: ''; position: absolute; left: calc(50% + 25px); right: calc(-50% + 25px); top: 23px; height: 3px; background: var(--color-rule); z-index: -1; }
+.borrow-page .transaction-progress li.done::after { background: var(--color-accent); }
+.borrow-page .transaction-progress li span { width: 48px; height: 48px; flex-basis: 48px; font-size: 1.25rem; }
+.kiosk .borrow-page .transaction-progress li.current span, .kiosk .borrow-page .transaction-progress li.done span { background: var(--color-accent); color: var(--color-paper); }
+.borrow-stages { display: grid; gap: var(--space-md); }
+.borrow-stage { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); align-items: center; gap: clamp(20px, 3vw, 40px); padding: clamp(20px, 3vw, 36px); border: var(--rule-width) solid var(--color-rule); border-radius: var(--radius-card); background: var(--color-paper); }
+.borrow-art { display: block; width: 100%; max-width: 320px; margin-inline: auto; }
+.borrow-stage > div { min-width: 0; }
+.borrow-stage h2 { font-size: clamp(1.4rem, 3.4vw, 2rem); font-weight: 650; line-height: 1.15; margin: 0 0 var(--space-lg); letter-spacing: -.02em; }
+.borrow-page .scan-panel { gap: var(--space-md); }
+.borrow-page .scan-panel > .primary { min-height: 60px; font-size: var(--text-xl); padding-inline: var(--space-sm); }
+.borrow-page .scan-panel > .primary svg { width: 26px; height: 26px; }
+.scan-alternative { display: flex; gap: var(--space-md); align-items: center; color: var(--color-muted); font-size: var(--text-sm); }
+.scan-alternative::before, .scan-alternative::after { content: ''; flex: 1; height: 1px; background: var(--color-rule); }
+.borrow-page .scan-panel form { margin: 0; gap: var(--space-xs); }
+.borrow-page .scan-panel label { font-size: var(--text-lg); font-weight: 600; }
+.borrow-page .scan-panel .inline { flex-direction: row; gap: var(--space-sm); }
+.borrow-page .scan-panel input { width: 0; min-height: 48px; padding-inline: 12px; }
+.borrow-page .scan-panel form button { min-height: 48px; padding-inline: var(--space-md); color: var(--color-accent); background: var(--color-blue-soft); border-color: var(--color-blue-soft); }
+.borrow-step-summary { display: grid; grid-template-columns: 48px minmax(0, 1fr) 116px; align-items: center; gap: var(--space-lg); min-height: 116px; padding: var(--space-md) var(--space-lg); border-radius: var(--radius-panel); background: var(--color-canvas); color: var(--color-muted); }
+.borrow-step-number { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--color-rule); color: var(--color-muted); font-family: var(--font-display); font-size: var(--text-xl); font-weight: 600; }
+.borrow-step-number svg { width: 22px; height: 22px; }
+.borrow-step-summary h2 { font-size: var(--text-xl); font-weight: 600; margin: 0 0 6px; line-height: 1.2; }
+.borrow-step-summary p { margin: 0; font-size: var(--text-lg); overflow-wrap: anywhere; }
+.borrow-step-summary .borrow-art { width: 116px; height: 88px; opacity: .35; filter: grayscale(1); }
+.borrow-step-summary.is-complete { background: var(--color-success-soft); color: var(--color-ink); }
+.is-complete .borrow-step-number { color: var(--color-success); background: var(--color-paper); }
+.borrow-page .borrow-change { justify-self: end; min-height: 48px; background: var(--color-paper); }
+.borrow-review .review-list { margin: 0; }
+.borrow-review .review-list > div { gap: var(--space-md); }
+.borrow-review .review-list strong { overflow-wrap: anywhere; }
+.borrow-review > div > .primary { width: 100%; }
+.borrow-receipt .receipt-detail { margin-bottom: var(--space-lg); }
+.borrow-receipt .primary { width: 100%; }
+.borrow-complete { display: flex; align-items: center; gap: var(--space-xs); color: var(--color-success); font-weight: 600; }
+.borrow-complete svg { width: 20px; }
+.borrow-footer { display: flex; justify-content: space-between; align-items: center; gap: var(--space-lg); margin-top: var(--space-lg); }
+.borrow-footer > button { min-height: 48px; padding-inline: var(--space-lg); color: var(--color-accent); background: var(--color-blue-soft); border-color: var(--color-blue-soft); font-size: var(--text-lg); }
+.borrow-footer p { display: flex; align-items: center; gap: var(--space-xs); color: var(--color-muted); font-size: var(--text-md); margin: 0; }
+.borrow-footer p svg { width: 22px; height: 22px; flex-shrink: 0; }
+@media (max-width: 700px) {
+  .borrow-step-summary { gap: var(--space-md); grid-template-columns: 40px minmax(0, 1fr) 80px; min-height: 100px; padding: var(--space-md); }
+  .borrow-step-number { width: 40px; height: 40px; font-size: var(--text-lg); }
+  .borrow-step-summary h2 { font-size: var(--text-lg); }
+  .borrow-step-summary p { font-size: var(--text-md); }
+  .borrow-step-summary .borrow-art { width: 80px; height: 68px; }
+  .borrow-stage { grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); gap: var(--space-md); }
+  .borrow-page .scan-panel > .primary { font-size: var(--text-lg); }
+  .borrow-page .transaction-progress li { font-size: var(--text-md); }
+  .borrow-footer p { font-size: var(--text-sm); }
+}
+@media (max-width: 520px) {
+  .borrow-stage { grid-template-columns: minmax(0, 1fr); gap: var(--space-md); }
+  .borrow-stage > .borrow-art { width: 190px; height: 150px; }
+  .borrow-stage h2 { font-size: var(--text-xl); }
+  .borrow-step-summary { grid-template-columns: 36px minmax(0, 1fr); }
+  .borrow-step-number { width: 36px; height: 36px; }
+  .borrow-step-summary > .borrow-art { display: none; }
+  .borrow-step-summary .borrow-change { grid-column: 2; justify-self: start; }
+  .borrow-footer { flex-wrap: wrap; }
+  .borrow-page .transaction-progress li { font-size: var(--text-sm); }
+  .borrow-review > .borrow-art { display: none; }
+}

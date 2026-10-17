@@ -34,7 +34,7 @@ requests_by_ip:dict[str,deque]=defaultdict(deque)
 @app.middleware("http")
 async def security_and_logging(request:Request,call_next):
     start=time.perf_counter();client=request.client.host if request.client else "unknown"
-    if request.url.path in {"/api/v1/auth/login","/api/v1/ai/search","/api/v1/ai/feedback","/api/v1/qr/decode-image","/api/v1/qr/verify-user","/api/v1/qr/verify-book","/api/v1/borrowings","/api/v1/returns","/api/v1/reservations"}:
+    if request.url.path in {"/api/v1/auth/login","/api/v1/ai/search","/api/v1/ai/recommend","/api/v1/ai/feedback","/api/v1/speech/transcribe","/api/v1/qr/decode-image","/api/v1/qr/verify-user","/api/v1/qr/verify-book","/api/v1/borrowings","/api/v1/returns","/api/v1/reservations"}:
         now=time.monotonic();bucket=requests_by_ip[f"{client}:{request.url.path}"]
         while bucket and now-bucket[0]>settings.rate_limit_window_seconds:bucket.popleft()
         if len(bucket)>=settings.rate_limit_requests_per_window:return JSONResponse(status_code=429,content={"detail":"Too many requests. Try again later."},headers={"Retry-After":str(settings.rate_limit_window_seconds)})

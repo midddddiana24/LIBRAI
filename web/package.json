@@ -14,7 +14,8 @@
     "test:ui-smoke": "node scripts/ui-smoke.mjs",
     "test:voice": "node --test src/voiceCommands.test.mjs src/audioActivity.test.mjs",
     "test:voice-ui": "node scripts/voice-ui-smoke.mjs",
-    "test:design-ui": "node scripts/design-ui-smoke.mjs"
+    "test:design-ui": "node scripts/design-ui-smoke.mjs",
+    "test:borrow-ui": "node scripts/borrow-ui-smoke.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

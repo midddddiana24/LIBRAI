@@ -10,7 +10,7 @@ Android packaging and publication follow-up is tracked in [the version 1.5 check
 
 Source commit `12fa2a2` was pushed to `online-admin-postgres`. The public website was then verified to contain the new Borrow layout and exact new logo. The live API was healthy and its new recommendation request limit was observed without calling a model or writing library records.
 
-Android 1.5/code 6 was built and installed on the connected Infinix X6531. The user confirmed the real microphone transcription **Romance** matched what they said, and that the answer was audible. The default QR engine opened without decoding; ML Kit then decoded the exact non-member test QR on the same device. Version **1.5.1/code 7**, which selects ML Kit explicitly, was subsequently built, signed, and installed. The regular Borrow-screen camera retest is pending the user's result. This device is a phone; it does not replace testing on the intended tablet or establish general speech accuracy.
+Android 1.5/code 6 was built and installed on the connected Infinix X6531. The user confirmed the real microphone transcription **Romance** matched what they said, and that the answer was audible. The default QR engine opened without decoding; ML Kit then decoded the exact non-member test QR on the same device. Version **1.5.1/code 7**, which selects ML Kit explicitly, was subsequently built, signed, and installed. The user then confirmed that the normal Borrow-screen camera scanned the same test QR and displayed the expected ID error. This device is a phone; it does not replace testing on the intended tablet or establish general speech accuracy.
 
 Checked 17 October 2026 in `C:/Users/rober/Desktop/LIBRAI`, branch `online-admin-postgres`.
 

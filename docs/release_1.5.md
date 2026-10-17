@@ -10,7 +10,7 @@ Source branch: `online-admin-postgres`.
 - The public website subsequently served the new Borrow layout and the exact new logo. Verified entry asset: `index-DnjeATiA.js`.
 - The public API returned healthy/database connected. A bounded check using invalid recommendation payloads returned thirty HTTP 422 responses, then HTTP 429 with `Retry-After: 60`, proving the new recommendation request limit was deployed. No model call or catalog/circulation write was made by that probe.
 - On the connected Infinix X6531, the user dictated **Romance**, the app displayed **Heard: Romance** and an AI answer, and the user confirmed the answer was audible through **Read answer aloud**.
-- The default Android scanner opened but did not decode the physical test QR. A diagnostic using the installed plugin's ML Kit engine decoded the **exact test value** successfully on the same physical device. Version 1.5.1/code 7 now selects ML Kit explicitly and has been installed successfully; the normal Borrow-screen retest is tracked below.
+- The default Android scanner opened but did not decode the physical test QR. A diagnostic using the installed plugin's ML Kit engine decoded the **exact test value** successfully on the same physical device. Version 1.5.1/code 7 now selects ML Kit explicitly and has been installed successfully; the user subsequently confirmed that the normal Borrow-screen camera scans the same QR and returns the expected ID validation error.
 - [Camera test QR](design_previews/camera-test-qr.png) contains `LIBRAI_CAMERA_CHECK_NOT_A_REAL_LIBRARY_ID`. It is deliberately not a real ID or book grant; successful scanning should lead to a server validation error, never a borrowing.
 
 ## Included
@@ -36,7 +36,7 @@ Latest build completed: `BUILD SUCCESSFUL in 26s`. Commands: `npm run android:sy
 
 ## Physical acceptance procedure
 
-An Infinix X6531 was subsequently connected by USB. `adb install -r` returned **Success**, and the installed package reports **1.5 / code 6**. LIBRAI launched on its 720x1600 screen. At the first test, both Wi-Fi and mobile data were off and the app correctly showed the connection-lost message; live audio/QR checks are pending an internet connection. No device serial number is stored here. These checks must not be marked complete based on browser simulations or a successful build.
+An Infinix X6531 was subsequently connected by USB. `adb install -r` returned **Success**, and the installed package reports **1.5 / code 6**. LIBRAI launched on its 720x1600 screen. At the first test, both Wi-Fi and mobile data were off and the app correctly showed the connection-lost message; after connectivity was restored, real microphone transcription, audible speech, and the corrected QR scanner passed the user-confirmed checks recorded above. No device serial number is stored here. These checks must not be marked complete based on browser simulations or a successful build.
 
 1. Connect by USB, enable USB debugging, and approve the computer. `adb devices -l` must show the tablet as `device`, not `unauthorized`.
 2. Install the updated APK with `adb install -r web/android/app/build/outputs/apk/debug/app-debug.apk` from the project root. If Android reports a signature mismatch, stop; do not uninstall and erase app data as a workaround.

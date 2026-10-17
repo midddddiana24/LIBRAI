@@ -958,6 +958,18 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AIContext */
+        AIContext: {
+            /** Topics */
+            topics?: string[];
+            /** Level */
+            level?: ("beginner" | "intermediate" | "advanced") | null;
+            /**
+             * Available Only
+             * @default false
+             */
+            available_only: boolean;
+        };
         /** AIFeedbackRequest */
         AIFeedbackRequest: {
             /** Interaction Id */
@@ -973,6 +985,7 @@ export interface components {
         };
         /** AIRequest */
         AIRequest: {
+            context?: components["schemas"]["AIContext"] | null;
             /** Query */
             query: string;
             /** User Id */
@@ -994,6 +1007,12 @@ export interface components {
         Body_transcribe_api_v1_speech_transcribe_post: {
             /** Audio */
             audio: string;
+            /**
+             * Language
+             * @default auto
+             * @enum {string}
+             */
+            language: "auto" | "en" | "fil";
         };
         /** Body_upload_cover_api_v1_books__book_id__cover_post */
         Body_upload_cover_api_v1_books__book_id__cover_post: {

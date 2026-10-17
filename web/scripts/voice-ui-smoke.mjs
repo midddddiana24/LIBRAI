@@ -46,6 +46,7 @@ try {
       transcriptions++
       const body = request.postDataBuffer()?.toString() || ''
       assert.match(body, /name="audio"/)
+      assert.match(body, /name="language"/)
       return route.fulfill({ json: { text: body.includes('history books') ? 'history books' : body.includes('hello') ? 'hello' : 'borrow a book' } })
     }
     if (path === '/api/v1/ai/search') return route.fulfill({ json: { answer: 'Try the library history shelf.', books: [] } })
@@ -81,8 +82,8 @@ try {
   await page.getByRole('button', { name: 'Dictate question' }).click()
   await page.getByRole('button', { name: 'Stop recording' }).click()
   await page.waitForFunction(() => document.querySelector('#ai-query')?.value === 'history books')
-  assert.equal(await page.getByRole('textbox', { name: 'What would you like to read?' }).inputValue(), 'history books')
-  await page.getByRole('button', { name: 'Ask', exact: true }).click()
+  assert.equal(await page.getByRole('textbox', { name: 'Message LIBRAI' }).inputValue(), 'history books')
+  await page.getByRole('button', { name: 'Send', exact: true }).click()
   await page.getByText('Try the library history shelf.').waitFor()
   await page.getByRole('button', { name: 'Read answer aloud' }).click()
   assert.equal((await page.evaluate(() => window.__spoken)).at(-1), 'Try the library history shelf.')

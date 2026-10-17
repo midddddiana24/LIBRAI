@@ -6,13 +6,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from backend.core.database import Base,get_db
 from backend.core.security import hash_password
-from backend.main import app
+from backend.main import app,requests_by_ip
 from backend.models.entities import Admin,Book,BookCopy,Category,CopyStatus,User
 from backend.core.config import settings
 
 
 @pytest.fixture(autouse=True)
 def isolate_external_services(monkeypatch):
+    # Each test gets a fresh limiter; tests of limits still exercise repeated requests.
+    requests_by_ip.clear()
     # Unit tests must not inherit real cloud storage or paid AI credentials.
     monkeypatch.setattr(settings, "media_bucket", None)
     monkeypatch.setattr(settings, "gemini_api_key", None)

@@ -16,14 +16,15 @@ def test_speech_requires_audio_and_configured_provider(client):
 def test_speech_normalizes_wav_without_blocking_event_loop(client, monkeypatch):
     monkeypatch.setattr(settings, 'gemini_api_key', 'fake-test-key')
 
-    def transcribe(content, mime_type):
+    def transcribe(content, mime_type, language):
+        assert language == 'fil'
         assert content == b'test-audio' and mime_type == 'audio/wav'
         with pytest.raises(RuntimeError):
             asyncio.get_running_loop()
         return 'Find Python books.'
 
     monkeypatch.setattr(gemini_client, 'transcribe', transcribe)
-    response = client.post('/api/v1/speech/transcribe', files={'audio': ('test.wav', b'test-audio', 'audio/x-wav')})
+    response = client.post('/api/v1/speech/transcribe', data={'language': 'fil'}, files={'audio': ('test.wav', b'test-audio', 'audio/x-wav')})
     assert response.status_code == 200 and response.json() == {'text': 'Find Python books.'}
 
 
@@ -40,3 +41,8 @@ def test_public_ai_routes_have_request_limits(client, monkeypatch, path, body, f
         assert limited.status_code == 429 and 'Retry-After' in limited.headers
     finally:
         requests_by_ip.clear()
+
+
+def test_speech_rejects_unsupported_language(client):
+    response = client.post('/api/v1/speech/transcribe', data={'language': 'invented'}, files={'audio': ('test.wav', b'audio', 'audio/wav')})
+    assert response.status_code == 422

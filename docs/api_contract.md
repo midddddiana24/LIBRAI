@@ -73,7 +73,7 @@ or other credential material.
 | Method | URL | Auth | Request → response | Rules/errors |
 |---|---|---|---|---|
 | GET | `/search/books` | Public | `q,category,author,available_only,publication_year,offset,limit` → `{items,total}` | SQL metadata search; records meaningful query analytics. |
-| POST | `/ai/search` | Public or user QR grant | `{query,user_id?,user_verification_token?}` → `{query,answer,message,books,ai_available,fallback_used}` | A user ID requires its grant; database candidates first; Gemini only ranks supplied IDs. |
+| POST | `/ai/search` | Public or user QR grant | `{query,user_id?,user_verification_token?,context?}` → `{query,answer,message,books,ai_available,fallback_used}` | A user ID requires its grant; database candidates first; Gemini only ranks supplied IDs. Returns bounded session context (topics, level, available_only); policy facts come from live admin settings. |
 | POST | `/ai/recommend` | Public or user QR grant | `{user_id?,kind,user_verification_token?}` → book array | Deterministic history/category/popularity/availability ranking. |
 | POST | `/speech/transcribe` | Public | multipart audio → `{text}` | Gemini transcription requires `GEMINI_API_KEY`; returns `503` without it, `502` if transcription fails, and rejects invalid or oversized uploads. No backend text-to-speech endpoint exists. |
 
@@ -164,3 +164,5 @@ The QR responses add `verification_token`. The updated frontend preserves it in 
 - `EMAIL_TRANSPORT=gmail_api` selects HTTPS delivery using private `GMAIL_OAUTH_FILE`. No OAuth tokens or credentials are returned by API endpoints.
 - `EMAIL_AUTOSEND_ENABLED` defaults false. When enabled, API lifespan polling processes up to five pending emails per cycle while the API is awake. Render sleep pauses polling; the Neon outbox persists.
 - Email configuration status includes transport, email_configured and autosend_enabled. These describe configuration, not successful Gmail authorization or inbox receipt.
+
+See [AI assistant behavior and verification](ai_assistant.md) for matching limits, session privacy, policy answers and physical voice acceptance checks.

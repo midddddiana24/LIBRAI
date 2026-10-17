@@ -3539,6 +3539,42 @@
   },
   "components": {
     "schemas": {
+      "AIContext": {
+        "properties": {
+          "topics": {
+            "items": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Topics"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "beginner",
+                  "intermediate",
+                  "advanced"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "available_only": {
+            "type": "boolean",
+            "title": "Available Only",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "AIContext"
+      },
       "AIFeedbackRequest": {
         "properties": {
           "interaction_id": {
@@ -3593,6 +3629,16 @@
       },
       "AIRequest": {
         "properties": {
+          "context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AIContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "query": {
             "type": "string",
             "maxLength": 1000,
@@ -3662,6 +3708,16 @@
             "type": "string",
             "contentMediaType": "application/octet-stream",
             "title": "Audio"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "en",
+              "fil"
+            ],
+            "title": "Language",
+            "default": "auto"
           }
         },
         "type": "object",

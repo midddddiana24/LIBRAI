@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Annotated
 
 from datetime import date
 from typing import Literal
@@ -136,7 +137,14 @@ class ReservationCreate(BaseModel):
     user_verification_token: str | None = None
 
 
+class AIContext(BaseModel):
+    topics: list[Annotated[str, Field(max_length=80)]] = Field(default_factory=list, max_length=8)
+    level: Literal["beginner", "intermediate", "advanced"] | None = None
+    available_only: bool = False
+
+
 class AIRequest(BaseModel):
+    context: AIContext | None = None
     query: str = Field(min_length=2, max_length=1000)
     user_id: int | None = None
     user_verification_token: str | None = None

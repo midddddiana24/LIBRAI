@@ -28,3 +28,11 @@ test('questions require a separate Ask tap', () => {
   assert.deepEqual(resolveVoiceCommand('Can you suggest a mystery book?'), { action: 'ask', query: 'Can you suggest a mystery book?' })
   assert.equal(resolveVoiceCommand('  '), null)
 })
+
+
+test('English, Filipino and mixed policy questions stay in the assistant', () => {
+  for (const phrase of ['How many books can I borrow?', 'Ilang libro ang puwedeng hiramin?', 'Magkano ang multa?', 'Show easier ones', 'Only available books', 'Can I renew my libro?']) {
+    assert.deepEqual(resolveVoiceCommand(phrase), { action: 'ask', query: phrase })
+  }
+  assert.deepEqual(resolveVoiceCommand('Find books about borrowing laws'), { action: 'search', query: 'borrowing laws' })
+})

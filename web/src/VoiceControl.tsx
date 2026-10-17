@@ -18,6 +18,7 @@ function recordingType(): string {
 export default function VoiceControl({ label, disabled = false, confirmBeforeUse = false, onTranscript }: Props) {
   const [status, setStatus] = useState<'idle' | 'requesting' | 'listening' | 'transcribing'>('idle')
   const [message, setMessage] = useState('')
+  const [language, setLanguage] = useState('auto')
   const [draft, setDraft] = useState<string | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -85,6 +86,7 @@ export default function VoiceControl({ label, disabled = false, confirmBeforeUse
           if (!mountedRef.current) return
           if (audible === false) { setMessage('No clear sound was recorded. Move closer to the microphone and try again.'); return }
           const form = new FormData()
+          form.append('language', language)
           form.append('audio', blob, type === 'audio/m4a' ? 'speech.m4a' : type === 'audio/ogg' ? 'speech.ogg' : 'speech.webm')
           const result = await api<{ text: string }>('/speech/transcribe', { method: 'POST', body: form }, undefined, 55_000)
           if (!mountedRef.current) return
@@ -114,6 +116,7 @@ export default function VoiceControl({ label, disabled = false, confirmBeforeUse
   }
 
   return <div className="voice-control">
+    <label>Speech language <select value={language} disabled={disabled || status !== 'idle'} onChange={event => setLanguage(event.target.value)}><option value="auto">English / Filipino (auto)</option><option value="en">English</option><option value="fil">Filipino</option></select></label>
     <button type="button" className={status === 'listening' ? 'voice-button listening' : 'voice-button'} disabled={disabled || status === 'requesting' || status === 'transcribing'} onClick={status === 'listening' ? stop : () => void start()}>
       {status === 'listening' ? <Square aria-hidden="true" /> : status === 'requesting' || status === 'transcribing' ? <LoaderCircle className="loading-spinner" aria-hidden="true" /> : <Mic aria-hidden="true" />}
       <span>{status === 'listening' ? 'Stop recording' : status === 'requesting' ? 'Connecting microphone…' : status === 'transcribing' ? 'Transcribing…' : label}</span>

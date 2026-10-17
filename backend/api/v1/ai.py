@@ -10,7 +10,7 @@ router=APIRouter(prefix="/ai",tags=["AI Assistant"])
 @router.post("/search")
 def search(payload:AIRequest,db:Session=Depends(get_db)):
     if payload.user_id:verify_kiosk_grant(payload.user_verification_token,payload.user_id)
-    return ai_search(db,payload.query,payload.user_id)
+    return ai_search(db,payload.query,payload.user_id,payload.context.model_dump() if payload.context else None)
 @router.post("/recommend")
 def recommend(payload:RecommendRequest,db:Session=Depends(get_db)):
     if payload.user_id:verify_kiosk_grant(payload.user_verification_token,payload.user_id)

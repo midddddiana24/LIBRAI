@@ -6,6 +6,10 @@ export type VoiceCommand =
 export function resolveVoiceCommand(text: string): VoiceCommand | null {
   const command = text.trim().toLowerCase().replace(/\s+/g, ' ').replace(/[.!?]+$/, '')
   if (!command) return null
+  // Questions about rules and follow-ups must not open a transaction screen.
+  if (/^(?:how many|how long|when|why|ilang|gaano|what is|what are|can i renew|puwede bang|pwede bang)\b/.test(command) || /\b(easier ones|only available|mas madali|loan period|borrowing limit|fine|fines|multa)\b/.test(command)) return { action: 'ask', query: text.trim() }
+  const explicitSearch = command.match(/^(?:please )?(?:search(?: for)?|find|look for)\s+(?:some\s+)?(?:books?\s+(?:about|on|by)\s+)?(.+)$/)
+  if (explicitSearch?.[1]) return { action: 'search', query: explicitSearch[1] }
   if (/\b(go home|home page|return home|back home|main menu|go to home|take me home|home)\b/.test(command) || /^(?:punta sa )?(?:home|unang pahina)$/.test(command)) return { action: 'home' }
   if (/\b(show available books|show me books i can borrow|available books|books on shelf|what books can i borrow|books available|what can i borrow|browse catalog|show all books)\b/.test(command) || /^(?:search books|find books|catalog|books|book|hanap ng libro|hanap ng aklat)$/.test(command) || /^(?:ipakita|tingnan) (?:ang )?(?:mga )?libro$/.test(command)) return { action: 'search', query: '' }
   if (/\b(return|give back|bring back)\b.*\b(book|books|one|it)\b/.test(command) || /^(?:please )?(?:return|returns)$/.test(command) || /\b(start return|i want to return|can i return)\b/.test(command) || /\b(?:ibalik|isauli|magsauli|magbalik|balik)\b(?:.*\b(?:libro|aklat|book)\b)?/.test(command)) return { action: 'return' }

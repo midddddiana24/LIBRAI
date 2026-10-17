@@ -15,9 +15,9 @@ export function cardScanHint(text: string, kind: CardKind): string | null {
 }
 
 function splitName(value: string): Pick<IdDraft, 'first_name' | 'last_name'> {
-  const name = value.replace(/^NAME\s*:?\s*/i, '').replace(/\s+/g, ' ').trim()
+  const name = value.replace(/^NAME\s*:?\s*/i, '').replace(/\s+/g, ' ').trim().replace(/^[~#|+$@= _:;]+|[~#|+$@= _:;]+$/g, '')
   if (!/^[\p{L}\p{M} .,'-]+$/u.test(name) || name.split(/\s+/).length < 2) return {}
-  if (/UNIVERSITY|CAMPUS|INFORMATION|TECHNOLOGY|SCHOOL|COLLEGE|SIGNATURE|PRESIDENT|IMPORTANT|ADDRESS|EMERGENCY/i.test(name) || /^(?:BS|BA|BACHELOR)\b/i.test(name)) return {}
+  if (/UNIVERSITY|CAMPUS|INFORMATION|TECHNOLOGY|SCHOOL|COLLEGE|SIGNATURE|PRESIDENT|IMPORTANT|ADDRESS|EMERGENCY|\bBRGY\b|\bBARANGAY\b|\bSTREET\b|\bPROVINCE\b/i.test(name) || /^(?:BS|BA|BACHELOR)\b/i.test(name)) return {}
   const suffix = /^(JR\.?|SR\.?|II|III|IV)$/i
   if (name.includes(',')) {
     const parts = name.split(',').map(p => p.trim()).filter(Boolean)
@@ -61,6 +61,15 @@ export function parseIdCard(text: string, kind: CardKind): IdDraft {
     if (match && index >= 0) {
       const value = lines[index].replace(/^NAME\s*:?\s*/i, '') || lines[index + 1] || ''
       Object.assign(draft, splitName(value))
+    }
+    if (match && !draft.first_name) {
+      // The small NAME label can disappear while the large surname-first line survives.
+      const following = lines.join('\n').slice(match.index! + match[0].length).split('\n').map(line => line.trim()).filter(Boolean)
+      for (const line of following.slice(0, 4)) {
+        if (!line.includes(',') || line !== line.toLocaleUpperCase()) continue
+        const name = splitName(line)
+        if (name.first_name) { Object.assign(draft, name); break }
+      }
     }
   }
   return draft

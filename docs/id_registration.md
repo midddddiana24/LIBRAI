@@ -30,10 +30,10 @@ The parser targets the supplied card layouts. It intentionally leaves uncertain/
 1. Match **Card to read** to the photo: campus front or library borrower's card front. Read the two cards separately; their numbers can differ.
 2. Use the front, including the printed number and name. The back, portrait alone, barcode alone and renewal stamps cannot fill this form.
 3. Fill the photo with the card, keep it upright, and avoid reflections across the printed text. Crop excess background using the phone's photo editor if necessary.
-4. The scanner first reads the page layout, then tries scattered-text mode if it cannot locate the selected card number. It handles supported dash/apostrophe variants, wrapped library-number labels, and campus number/name text on one line.
+4. The scanner first reads the page layout, then tries scattered-text mode if it cannot locate the selected card number. For a tightly framed portrait campus card, it can also read the lower printed number/name strips with a dark-ink threshold. Two name readings must agree; uncertain fields remain blank. Library images are enlarged, and a large surname-first name can be read even when the small NAME label is missed.
 5. If suggestions remain incomplete, type the missing values into the form. The scanner never guesses missing or ambiguous digits.
 
-Wrong-card and back-of-card messages now explain which photo to select. Blank/unreadable images show different guidance from readable text whose fields could not be located. Exact-photo quality still needs confirmation with the photo that failed; synthetic OCR tests are not proof that every real card will scan.
+Wrong-card and back-of-card messages explain which photo to select. Blank/unreadable images show different guidance from readable text whose fields could not be located. The focused campus fallback targets the supplied portrait layout; differently framed or styled cards may still require manual input. It never inserts missing digits or treats OCR as identity verification.
 
 ## Data handling and authentication
 
@@ -43,7 +43,9 @@ Only submitted form fields are sent to `/api/v1/registrations`. Public requests 
 
 ## Verification
 
-Verification on 17 October 2026: the preceding full backend run passed **60 tests**. For the frontend OCR correction, **eight parser tests**, TypeScript/Vite build, lint and the real OCR/isolated-backend browser flow passed. The browser check includes an unreadable image, wrong selected card, campus number/name on one line, and a wrapped library-card number. Earlier eight-viewport checks passed after correcting the short-landscape Register layout. The migration check was against a temporary database, not Neon.
+Verification on 17 October 2026: the preceding full backend run passed **60 tests**. The latest frontend OCR correction passed **ten parser tests**, TypeScript/Vite build and lint. A private browser acceptance check used both supplied real front photos: campus number/name/suffix matched the printed card; library number/name matched its card; applying the library scan preserved the separate campus number. Network interception prevented API uploads or registration submissions. The printed course was not reliably extracted and remains a manual field for this photo.
+
+The preceding real OCR/isolated-backend browser flow also passed, including an unreadable image, wrong selected card, campus number/name on one line, and a wrapped library-card number. Earlier eight-viewport checks passed after correcting the short-landscape Register layout. The migration check was against a temporary database, not Neon.
 
 - Backend tests cover registration, pending restrictions, authenticated approval/rejection, duplicate protection, separate library numbers, and request limits.
 - Parser tests use synthetic identities and verify suffix/name order, separate numbers, ambiguous-number rejection, and exclusion of renewal/emergency data.
@@ -52,7 +54,7 @@ Verification on 17 October 2026: the preceding full backend run passed **60 test
 - Responsive kiosk/admin checks cover eight viewports, including short landscape tablet layouts.
 - Screenshot: [synthetic-data registration form](design_previews/registration-review-768.png).
 
-No real ID photos or personal details from the supplied images are included in the code, test fixtures, or screenshots. Actual Android camera capture of an ID photo and extraction quality on these real cards still need user acceptance testing.
+No real ID photos or personal details from the supplied images are included in committed code, test fixtures, or screenshots. The private photo acceptance check was in desktop Chromium at a tablet viewport; actual Android camera capture still needs a separate device check.
 
 ## Deployment
 

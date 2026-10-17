@@ -47,3 +47,18 @@ test('OCR does not guess unreadable digits or use document and academic year num
   assert.deepEqual(parseIdCard('STUDENT ID 25-I234\nJUAN CRUZ', 'campus'), {})
   assert.deepEqual(parseIdCard('Document No. 25-1234\n2026-2027\nJUAN CRUZ', 'campus'), {})
 })
+
+test('library front reads the large surname-first line when the NAME label is lost', () => {
+  assert.deepEqual(parseIdCard("BORROWER'S CARD\nBorrower's Card No. 25-9876\n~~ DELA CRUZ, JR., JUAN, P.\nBrgy. Sample Town", 'library'), {
+    library_card_number: '25-9876', first_name: 'JUAN P.', last_name: 'DELA CRUZ JR.',
+  })
+  assert.deepEqual(parseIdCard("Borrower's Card No. 25-9876\nBRGY. SAMPLE, TOWN\nWEST VISAYAS STATE UNIVERSITY", 'library'), {
+    library_card_number: '25-9876',
+  })
+})
+
+test('campus name accepts stray margin symbols while preserving the printed suffix', () => {
+  assert.deepEqual(parseIdCard('25-1234\n+JUAN P. DELA CRUZ JR.', 'campus'), {
+    student_id: '25-1234', first_name: 'JUAN P.', last_name: 'DELA CRUZ JR.',
+  })
+})

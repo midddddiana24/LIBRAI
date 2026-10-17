@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Camera, LoaderCircle, ScanText, Upload } from 'lucide-react'
 import type { Worker } from 'tesseract.js'
 import { cardScanHint, parseIdCard, type CardKind, type IdDraft } from './idCardFields'
+import { recoverCampusText } from './idCardRecovery'
 
 const labels: Record<keyof IdDraft, string> = { student_id: 'Campus student ID', library_card_number: 'Library card number', first_name: 'First name / middle initial', last_name: 'Last name / suffix', course: 'Course' }
 
@@ -35,7 +36,7 @@ export default function IdScanPanel({ onApply, disabled }: { onApply: (draft: Id
       if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024) throw Error('Choose a JPEG, PNG, or WebP photo smaller than 10 MB.')
       const image = await createImageBitmap(file)
       if (image.width * image.height > 40_000_000) { image.close(); throw Error('Photo dimensions are too large. Take a smaller photo.') }
-      const scale = Math.min(1, 2200 / Math.max(image.width, image.height))
+      const scale = Math.min(kind === 'library' ? 2 : 1, 2400 / Math.max(image.width, image.height))
       const canvas = document.createElement('canvas')
       canvas.width = Math.round(image.width * scale); canvas.height = Math.round(image.height * scale)
       const context = canvas.getContext('2d')
@@ -63,6 +64,11 @@ export default function IdScanPanel({ onApply, disabled }: { onApply: (draft: Id
         fields = { ...fields, ...parseIdCard(result.data.text, kind) }
         hint = cardScanHint(result.data.text, kind)
         if (hint) fields = {}
+      }
+      if (kind === 'campus' && !fields.student_id && !hint) {
+        setMessage('Reading the printed number and name separately...')
+        fields = { ...fields, ...await recoverCampusText(worker, canvas, alive) }
+        if (!alive()) return
       }
       setDraft(fields)
       setMessage(hint || (Object.keys(fields).length ? 'Check these suggestions against the card. OCR can misread names and numbers.' : result.data.text.trim() ? 'Text was detected, but the name and ID number could not be located. Crop the photo to the card edges, avoid glare, and check Card to read. You can also type the details below.' : 'No readable text was detected. Move closer, focus on the printed name and ID number, and avoid glare. You can also type the details below.'))

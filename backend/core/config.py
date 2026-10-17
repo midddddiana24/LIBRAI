@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -40,6 +41,9 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     smtp_from: str | None = None
     smtp_use_tls: bool = True
+    email_transport: Literal["smtp", "gmail_api"] = "smtp"
+    gmail_oauth_file: Path = Path("generated/gmail-oauth.json")
+    email_autosend_enabled: bool = False
     media_bucket: str | None = None
     aws_endpoint_url_s3: str | None = None
     aws_access_key_id: str | None = None

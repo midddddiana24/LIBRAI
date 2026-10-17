@@ -119,3 +119,8 @@ Only after the new API passes the checks above:
 Neon announced 1 GB PostgreSQL and 5 GB Object Storage per Free project in October 2026; [check the current Free limits](https://neon.com/blog/neon-free-plan-1-gb-per-project) in your account. Render Free services sleep and lose **local** files on restart, which is why this setup places records and files in Neon. Free plans still have usage and recovery limits. Make regular backups of **both** PostgreSQL data and Object Storage files; a database backup alone does not contain images or reports.
 
 The old API at `https://librai-api-zjic.onrender.com` and the old website remain unchanged until Part 4. `neon init` only installed tooling and wrote local configuration; it did **not** create the bucket, import records, or publish the API.
+
+
+## Gmail notifications and emailed library IDs
+
+See [Gmail notifications setup](gmail_notifications.md). Render Free blocks SMTP ports; use a separate SMTP-capable worker. Approval queues the member QR email; queued does not mean sent.

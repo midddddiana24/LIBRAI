@@ -5,17 +5,19 @@ import type { ActiveBorrowing, Book, BookGrant, BorrowReceipt, Page, ReturnRecei
 import { QrCapture } from './QrCapture'
 import AccountPanel from './AccountPanel'
 import KioskHome from './KioskHome'
+import MemberForm from './MemberForm'
 import { BorrowFlow, ReturnFlow } from './KioskTransaction'
 import StartupScreen from './StartupScreen'
 import VoiceControl from './VoiceControl'
 import { resolveVoiceCommand } from './voiceCommands'
 import useScreenMotion from './useScreenMotion'
 
-type View = 'home' | 'search' | 'detail' | 'borrow' | 'return' | 'account' | 'assistant' | 'discover'
+type View = 'register' | 'home' | 'search' | 'detail' | 'borrow' | 'return' | 'account' | 'assistant' | 'discover'
 const SESSION_TIMEOUT_MS = 90_000
 
 export default function KioskApp() {
   const [view, setView] = useState<View>('home')
+  const [registrationMessage, setRegistrationMessage] = useState('')
   const [online, setOnline] = useState<boolean | null>(null)
   const [starting, setStarting] = useState(true)
   const [error, setError] = useState('')
@@ -47,7 +49,7 @@ export default function KioskApp() {
     window.speechSynthesis?.cancel()
     setSpeaking(false); setVoiceNotice('')
     setSessionKey(current => current + 1)
-    setUser(null); setCopy(null); setReceipt(null); setActiveReturn(null)
+    setUser(null); setCopy(null); setReceipt(null); setActiveReturn(null); setRegistrationMessage('')
     setAiQuery(''); setAiAnswer(''); setAiBooks([]); setAiInteraction(null); setFeedbackSent(false); setError(''); setView('home')
     lastActivity.current = Date.now(); setSecondsLeft(90)
   }, [])
@@ -98,6 +100,15 @@ export default function KioskApp() {
   function changeBorrowUser() { setUser(null); setCopy(null); setError('') }
   function changeBorrowBook() { setCopy(null); setError('') }
   function changeReturnBook() { setCopy(null); setActiveReturn(null); setError('') }
+
+  async function submitRegistration(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const payload = Object.fromEntries(new FormData(event.currentTarget))
+    await run(async () => {
+      const result = await api<{ message: string }>('/registrations', { method: 'POST', body: JSON.stringify(payload) })
+      setRegistrationMessage(result.message)
+    })
+  }
 
   async function scanUser(token: string) {
     await run(async () => { setUser(await verifyUser(token)) })
@@ -211,9 +222,10 @@ export default function KioskApp() {
       {privateSession && secondsLeft <= 15 && <div className="session-warning" role="status"><strong>This session will clear in {secondsLeft} seconds.</strong><span>Touch the screen to keep working, or select End session to clear your information now.</span></div>}
       {error && <div className="alert error" role="alert">{error}</div>}
       {voiceNotice && <div className="voice-notice" role="status"><span>{voiceNotice}</span><button type="button" onClick={() => speaking ? stopReading() : readAloud(voiceNotice)}>{speaking ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}{speaking ? 'Stop reading' : 'Read aloud'}</button></div>}
-      {view === 'home' && <KioskHome key={sessionKey} query={query} busy={busy} online={online} onQuery={setQuery} onSearch={search => void loadBooks(search)} onBorrow={startBorrow} onReturn={startReturn} onAccount={() => { setView('account'); setError('') }} onAssistant={() => setView('assistant')} onDiscover={() => void discover('recommended')} onVoiceCommand={handleVoiceCommand} onHearInstructions={() => readAloud('Welcome to LIBRAI. Tap Voice command, say borrow a book, return a book, or find books, then check the words before running the command.')} />}
+      {view === 'home' && <KioskHome key={sessionKey} query={query} busy={busy} online={online} onQuery={setQuery} onSearch={search => void loadBooks(search)} onBorrow={startBorrow} onReturn={startReturn} onRegister={() => { setRegistrationMessage(''); setView('register'); setError('') }} onAccount={() => { setView('account'); setError('') }} onAssistant={() => setView('assistant')} onDiscover={() => void discover('recommended')} onVoiceCommand={handleVoiceCommand} onHearInstructions={() => readAloud('Welcome to LIBRAI. Tap Voice command, say borrow a book, return a book, or find books, then check the words before running the command.')} />}
       {view === 'search' && <><div className="page-heading"><div><p className="eyebrow">Library catalog</p><h1>Find a book</h1><p>{catalog.total} titles found</p></div><button onClick={() => setView('home')}>Home</button></div><form className="search-form" onSubmit={event => { event.preventDefault(); void loadBooks(query) }}><input aria-label="Search books" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search title, author, or topic" /><button className="primary" disabled={busy}>Search</button></form><div className="book-grid">{catalog.items.map(book => <button className="book-card" key={book.id} onClick={() => void showBook(book.id)}>{(book.cover_url || book.cover_image) ? <img src={mediaUrl(book.cover_url || book.cover_image)} alt="" /> : <div className="cover-placeholder">LIBRAI</div>}<strong>{book.title}</strong><span>{book.author}</span><small>{book.available_copies || 0} available · {book.shelf_location || 'Ask the librarian'}</small></button>)}</div>{!catalog.items.length && <div className="empty">No books found. Try another search.</div>}<div className="pagination"><button disabled={busy || catalogOffset === 0} onClick={() => void loadBooks(query, Math.max(0, catalogOffset - 20))}>Previous</button><span>{catalog.total ? `${catalogOffset + 1}–${Math.min(catalogOffset + 20, catalog.total)} of ${catalog.total}` : '0 results'}</span><button disabled={busy || catalogOffset + 20 >= catalog.total} onClick={() => void loadBooks(query, catalogOffset + 20)}>Next</button></div></>}
       {view === 'detail' && selected && <><button onClick={() => setView('search')}>← Back to results</button><div className="detail"><div className="detail-cover">{(selected.cover_url || selected.cover_image) ? <img src={mediaUrl(selected.cover_url || selected.cover_image)} alt="Book cover" /> : 'LIBRAI'}</div><div><p className="eyebrow">{selected.category || 'Library catalog'}</p><h1>{selected.title}</h1><h2>by {selected.author}</h2><p>{selected.description || 'No description available.'}</p><div className="facts"><span>Available: {selected.available_copies || 0}</span><span>Shelf: {selected.shelf_location || 'Ask the librarian'}</span></div>{(selected.available_copies || 0) > 0 ? <button className="primary large" onClick={startBorrow}>Borrow a copy</button> : user ? <button className="primary large" disabled={busy} onClick={() => void reserveSelected()}>Reserve this title</button> : <button onClick={() => setView('account')}>Scan your ID to reserve</button>}</div></div></>}
+      {view === 'register' && (registrationMessage ? <section className="panel registration-result" role="status"><h1>Registration request received</h1><p>{registrationMessage}</p><button onClick={endSession}>Finish and clear session</button></section> : <MemberForm key={sessionKey} publicRegistration busy={busy} onSubmit={event => void submitRegistration(event)} onCancel={endSession} />)}
       {view === 'borrow' && <BorrowFlow user={user} copy={copy} receipt={receipt} busy={busy} onUser={token => void scanUser(token)} onBook={token => void scanBorrowBook(token)} onChangeUser={changeBorrowUser} onChangeBook={changeBorrowBook} onConfirm={() => void confirmBorrow()} onFinish={endSession} />}
       {view === 'return' && <ReturnFlow copy={copy} activeReturn={activeReturn} receipt={receipt} busy={busy} onBook={token => void scanReturnBook(token)} onChangeBook={changeReturnBook} onConfirm={() => void confirmReturn()} onFinish={endSession} />}
       {view === 'account' && <><div className="page-heading"><div><p className="eyebrow">Private session</p><h1>My account</h1></div><button onClick={endSession}>End session</button></div>{user ? <AccountPanel user={user} /> : <div className="panel"><p>Scan your library ID to see your borrowing history.</p><QrCapture label="your library ID" busy={busy} onToken={token => void scanUser(token)} /></div>}</>}

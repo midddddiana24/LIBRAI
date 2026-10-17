@@ -6,6 +6,45 @@
     "version": "1.0.0"
   },
   "paths": {
+    "/api/v1/registrations": {
+      "post": {
+        "tags": [
+          "Registration"
+        ],
+        "summary": "Request Registration",
+        "operationId": "request_registration_api_v1_registrations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "tags": [
@@ -113,7 +152,12 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -155,6 +199,28 @@
                 }
               ],
               "title": "Q"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "ACTIVE",
+                    "PENDING",
+                    "INACTIVE",
+                    "SUSPENDED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
             }
           },
           {
@@ -323,6 +389,51 @@
         },
         "responses": {
           "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{user_id}/email-qr": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Email Qr",
+        "operationId": "email_qr_api_v1_users__user_id__email_qr_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
             "description": "Successful Response",
             "content": {
               "application/json": {
@@ -2814,6 +2925,120 @@
         }
       }
     },
+    "/api/v1/notifications/admin/email-status": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Email Status",
+        "operationId": "email_status_api_v1_notifications_admin_email_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/admin/email-deliveries/{delivery_id}/send": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Send Email",
+        "operationId": "send_email_api_v1_notifications_admin_email_deliveries__delivery_id__send_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "delivery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Delivery Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/admin/email-deliveries/{delivery_id}/retry": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Retry Email",
+        "operationId": "retry_email_api_v1_notifications_admin_email_deliveries__delivery_id__retry_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "delivery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Delivery Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/notifications/admin/email-deliveries": {
       "get": {
         "tags": [
@@ -4023,6 +4248,93 @@
         "type": "object",
         "title": "RecommendRequest"
       },
+      "RegistrationCreate": {
+        "properties": {
+          "student_id": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Student Id"
+          },
+          "library_card_number": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library Card Number"
+          },
+          "first_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Last Name"
+          },
+          "course": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Course"
+          },
+          "year_level": {
+            "type": "string",
+            "maxLength": 30,
+            "minLength": 1,
+            "title": "Year Level"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "contact_number": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Number"
+          },
+          "status": {
+            "type": "string",
+            "const": "PENDING",
+            "title": "Status",
+            "default": "PENDING"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "student_id",
+          "first_name",
+          "last_name",
+          "course",
+          "year_level"
+        ],
+        "title": "RegistrationCreate"
+      },
       "RenewRequest": {
         "properties": {
           "user_id": {
@@ -4166,6 +4478,19 @@
             "minLength": 2,
             "title": "Student Id"
           },
+          "library_card_number": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library Card Number"
+          },
           "first_name": {
             "type": "string",
             "maxLength": 100,
@@ -4237,6 +4562,19 @@
       },
       "UserUpdate": {
         "properties": {
+          "library_card_number": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library Card Number"
+          },
           "first_name": {
             "anyOf": [
               {
@@ -4317,7 +4655,8 @@
                 "enum": [
                   "ACTIVE",
                   "INACTIVE",
-                  "SUSPENDED"
+                  "SUSPENDED",
+                  "PENDING"
                 ]
               },
               {

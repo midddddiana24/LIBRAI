@@ -29,6 +29,7 @@ def user_admin_dict(db: Session, user: User, borrowing_limit: int) -> dict:
     data.update(
         {
             "first_name": user.first_name,
+            "library_card_number": user.library_card_number,
             "last_name": user.last_name,
             "email": user.email,
             "contact_number": user.contact_number,

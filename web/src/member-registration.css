@@ -1,0 +1,29 @@
+.member-form { max-width: 1000px; margin-inline: auto; }
+.member-form > h2, .member-form-intro, .id-scan-panel, .member-review, .member-form-buttons { grid-column: 1 / -1; }
+.member-form-intro { margin: 0; color: var(--color-muted); }
+.id-scan-panel { padding: var(--space-lg); border: 1px solid var(--color-rule); border-radius: var(--radius-panel); background: var(--color-canvas); }
+.id-scan-heading { display: flex; align-items: flex-start; gap: var(--space-sm); }
+.id-scan-heading > svg { flex: none; width: 28px; height: 28px; color: var(--color-accent); }
+.id-scan-heading h3 { margin: 0 0 var(--space-xs); font-size: var(--text-xl); }
+.id-scan-panel p { color: var(--color-muted); margin: var(--space-xs) 0 var(--space-md); }
+.id-scan-panel > label { display: grid; gap: var(--space-xs); max-width: 420px; }
+.id-scan-actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-block: var(--space-md); }
+.id-scan-panel button { min-height: 48px; }
+.id-scan-status { display: flex; align-items: center; gap: var(--space-xs); }
+.id-scan-status svg { flex: none; width: 22px; }
+.id-photo-preview { display: block; max-width: 100%; max-height: 210px; margin-block: var(--space-md); border-radius: var(--radius-input); }
+.id-scan-results dl { margin: 0 0 var(--space-md); }
+.id-scan-results dl > div { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); padding: var(--space-xs) 0; border-bottom: 1px solid var(--color-rule); overflow-wrap: anywhere; }
+.id-scan-results dt { color: var(--color-muted); }
+.id-scan-results dd { margin: 0; font-weight: 600; }
+.id-scan-privacy { font-size: var(--text-sm); }
+.member-review { display: flex !important; flex-direction: row !important; align-items: center; gap: var(--space-sm); }
+.member-review input { width: 22px; height: 22px; min-height: 22px; flex: none; accent-color: var(--color-accent); }
+.registration-result { max-width: 720px; margin: var(--space-xl) auto; }
+.library-card-label { display: block; color: var(--color-muted); font-weight: 400; }
+.registration-filters { display: flex; gap: var(--space-sm); margin-bottom: var(--space-lg); flex-wrap: wrap; }
+@media (max-width: 650px) {
+  .member-form { grid-template-columns: minmax(0, 1fr); }
+  .id-scan-panel { padding: var(--space-md); }
+  .id-scan-results dl > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}

@@ -46,6 +46,7 @@ async def decode_qr_image(file:UploadFile=File(...)):
 def verify_user(payload:QRVerifyRequest,db:Session=Depends(get_db)):
     user=db.scalar(select(User).where(User.qr_token==payload.resolved_token))
     if not user:raise HTTPException(status_code=404,detail="Invalid user QR code.")
+    if user.status=="PENDING":raise HTTPException(403,"Registration is awaiting staff approval.")
     data=user_safe_dict(db,user,borrowing_limit(db));data["verification_token"]=create_kiosk_grant(user.id);return data
 
 @router.post("/qr/verify-book")
@@ -58,12 +59,14 @@ def verify_book(payload:QRVerifyRequest,db:Session=Depends(get_db)):
 def rotate_user_qr(user_id:int,admin:Admin=Depends(get_current_admin),db:Session=Depends(get_db)):
     user=db.get(User,user_id)
     if not user:raise HTTPException(404,"User not found.")
+    if user.status=="PENDING":raise HTTPException(403,"Approve registration before issuing a library QR.")
     user.qr_token=make_qr_token("USR_QR");audit(db,"USER_QR_ROTATED","user",user.id,admin=admin);db.commit();return qr_admin_payload("user",user.id,user.qr_token)
 
 @router.get("/users/{user_id}/qr")
 def get_user_qr(user_id:int,_admin:Admin=Depends(get_current_admin),db:Session=Depends(get_db)):
     user=db.get(User,user_id)
     if not user:raise HTTPException(404,"User not found.")
+    if user.status=="PENDING":raise HTTPException(403,"Approve registration before issuing a library QR.")
     return qr_admin_payload("user",user.id,user.qr_token)
 
 @router.post("/book-copies/{copy_id}/qr")
@@ -88,6 +91,7 @@ def download_qr(ticket:str,db:Session=Depends(get_db)):
         entity=db.get(BookCopy,entity_id)
         identifier=entity.accession_number if entity else ""
     if not entity:raise HTTPException(404,"QR owner not found.")
+    if entity_type=="user" and entity.status=="PENDING":raise HTTPException(403,"Registration is awaiting staff approval.")
     safe_identifier=re.sub(r"[^A-Za-z0-9._-]+","-",identifier).strip("-") or str(entity_id)
     headers={"Content-Disposition":f'attachment; filename="LIBRAI-{safe_identifier}-QR.png"',"Cache-Control":"no-store"}
     return Response(content=qr_png(entity.qr_token),media_type="image/png",headers=headers)

@@ -24,7 +24,9 @@ class QRVerifyRequest(BaseModel):
 
 
 class UserCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     student_id: str = Field(min_length=2, max_length=80)
+    library_card_number: str | None = Field(default=None, min_length=2, max_length=80)
     first_name: str = Field(min_length=1, max_length=100)
     last_name: str = Field(min_length=1, max_length=100)
     course: str = Field(min_length=1, max_length=150)
@@ -33,15 +35,32 @@ class UserCreate(BaseModel):
     contact_number: str | None = Field(default=None, max_length=40)
     status: Literal["ACTIVE", "INACTIVE", "SUSPENDED"] = "ACTIVE"
 
+    @field_validator("library_card_number", "email", "contact_number", mode="before")
+    @classmethod
+    def empty_optional_field(cls, value):
+        return value.strip() or None if isinstance(value, str) else value
+
+
+class RegistrationCreate(UserCreate):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    status: Literal["PENDING"] = "PENDING"
+
 
 class UserUpdate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+    library_card_number: str | None = Field(default=None, min_length=2, max_length=80)
     first_name: str | None = Field(default=None, min_length=1, max_length=100)
     last_name: str | None = Field(default=None, min_length=1, max_length=100)
     course: str | None = Field(default=None, min_length=1, max_length=150)
     year_level: str | None = None
     email: EmailStr | None = None
     contact_number: str | None = None
-    status: Literal["ACTIVE", "INACTIVE", "SUSPENDED"] | None = None
+    status: Literal["ACTIVE", "INACTIVE", "SUSPENDED", "PENDING"] | None = None
+
+    @field_validator("library_card_number", "email", "contact_number", mode="before")
+    @classmethod
+    def empty_optional_field(cls, value):
+        return value.strip() or None if isinstance(value, str) else value
 
 
 class BookCreate(BaseModel):

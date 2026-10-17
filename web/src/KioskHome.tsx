@@ -1,4 +1,4 @@
-import { ArrowUpRight, AudioLines, LoaderCircle, Search, Volume2 } from 'lucide-react'
+import { ArrowUpRight, AudioLines, LoaderCircle, Search, Volume2, UserRoundPlus } from 'lucide-react'
 import LibraryActionIcon from './LibraryActionIcon'
 import KioskTileArt from './KioskTileArt'
 import VoiceControl from './VoiceControl'
@@ -11,6 +11,7 @@ type Props = {
   onSearch: (query: string) => void
   onBorrow: () => void
   onReturn: () => void
+  onRegister: () => void
   onAccount: () => void
   onAssistant: () => void
   onDiscover: () => void
@@ -18,7 +19,7 @@ type Props = {
   onHearInstructions: () => void
 }
 
-export default function KioskHome({ query, busy, online, onQuery, onSearch, onBorrow, onReturn, onAccount, onAssistant, onDiscover, onVoiceCommand, onHearInstructions }: Props) {
+export default function KioskHome({ query, busy, online, onQuery, onSearch, onBorrow, onReturn, onRegister, onAccount, onAssistant, onDiscover, onVoiceCommand, onHearInstructions }: Props) {
   const unavailable = busy || online === false
 
   return <div className="kiosk-home kiosk-menu">
@@ -58,6 +59,7 @@ export default function KioskHome({ query, busy, online, onQuery, onSearch, onBo
         </form>
         <div className="kiosk-voice-entry"><AudioLines className="voice-dock-icon" aria-hidden="true" /><div><strong>A little help, just ask.</strong><span>Speak in English or Filipino.</span></div><VoiceControl label="Voice command" disabled={unavailable} confirmBeforeUse onTranscript={onVoiceCommand} /></div>
         <div className="kiosk-quick-links">
+          <button disabled={unavailable} onClick={onRegister}><UserRoundPlus aria-hidden="true" />Register</button>
           <button disabled={unavailable} onClick={onAccount}><LibraryActionIcon kind="account" />My account</button>
           <button disabled={unavailable} onClick={onAssistant}><LibraryActionIcon kind="assistant" />Ask LIBRAI</button>
         </div>

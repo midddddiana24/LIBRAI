@@ -19,6 +19,7 @@ class AdminRole(StrEnum):
 
 
 class UserStatus(StrEnum):
+    PENDING = "PENDING"
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
     SUSPENDED = "SUSPENDED"
@@ -79,6 +80,7 @@ class User(TimestampMixin, Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(primary_key=True)
     student_id: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    library_card_number: Mapped[str | None] = mapped_column(String(80), unique=True, index=True, nullable=True)
     first_name: Mapped[str] = mapped_column(String(100))
     last_name: Mapped[str] = mapped_column(String(100))
     course: Mapped[str] = mapped_column(String(150))

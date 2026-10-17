@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/prepare-ocr-assets.mjs",
+    "prebuild": "node scripts/prepare-ocr-assets.mjs",
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
@@ -15,7 +17,9 @@
     "test:voice": "node --test src/voiceCommands.test.mjs src/audioActivity.test.mjs",
     "test:voice-ui": "node scripts/voice-ui-smoke.mjs",
     "test:design-ui": "node scripts/design-ui-smoke.mjs",
-    "test:borrow-ui": "node scripts/borrow-ui-smoke.mjs"
+    "test:borrow-ui": "node scripts/borrow-ui-smoke.mjs",
+    "test:id-fields": "node --test src/idCardFields.test.mjs",
+    "test:registration-ui": "node scripts/registration-ui-smoke.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
@@ -27,10 +31,12 @@
     "gsap": "^3.15.0",
     "lucide-react": "^1.56.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.3",
+    "@tesseract.js-data/eng": "^1.0.0",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",

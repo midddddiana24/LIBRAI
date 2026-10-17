@@ -1,5 +1,7 @@
 from __future__ import annotations
 import logging,time
+from contextlib import asynccontextmanager
+from threading import Event, Thread
 from collections import defaultdict,deque
 from fastapi import FastAPI,Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,7 +16,19 @@ from backend.core.logging import configure_logging
 from backend.services import object_storage
 
 configure_logging();logger=logging.getLogger(__name__)
-app=FastAPI(title="LIBRAI API",version="1.0.0",description="Authoritative library kiosk backend",docs_url="/docs",redoc_url="/redoc")
+@asynccontextmanager
+async def lifespan(_app):
+    stop=Event()
+    if settings.email_autosend_enabled:
+        from backend.services.email_dispatch import poll
+        Thread(target=poll,args=(stop,),daemon=True,name="librai-email").start()
+    try:
+        yield
+    finally:
+        # Pending rows survive a Render sleep/restart; SMTP/Gmail cannot guarantee exactly-once acceptance.
+        stop.set()
+
+app=FastAPI(title="LIBRAI API",version="1.0.0",description="Authoritative library kiosk backend",docs_url="/docs",redoc_url="/redoc",lifespan=lifespan)
 app.add_middleware(CORSMiddleware,allow_origins=settings.cors_origins,allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
 install_exception_handlers(app);app.include_router(api_router,prefix="/api/v1")
 __import__("pathlib").Path("generated/covers").mkdir(parents=True,exist_ok=True)
@@ -34,7 +48,7 @@ requests_by_ip:dict[str,deque]=defaultdict(deque)
 @app.middleware("http")
 async def security_and_logging(request:Request,call_next):
     start=time.perf_counter();client=request.client.host if request.client else "unknown"
-    if request.url.path in {"/api/v1/auth/login","/api/v1/ai/search","/api/v1/ai/recommend","/api/v1/ai/feedback","/api/v1/speech/transcribe","/api/v1/qr/decode-image","/api/v1/qr/verify-user","/api/v1/qr/verify-book","/api/v1/borrowings","/api/v1/returns","/api/v1/reservations"}:
+    if request.url.path in {"/api/v1/registrations","/api/v1/auth/login","/api/v1/ai/search","/api/v1/ai/recommend","/api/v1/ai/feedback","/api/v1/speech/transcribe","/api/v1/qr/decode-image","/api/v1/qr/verify-user","/api/v1/qr/verify-book","/api/v1/borrowings","/api/v1/returns","/api/v1/reservations"}:
         now=time.monotonic();bucket=requests_by_ip[f"{client}:{request.url.path}"]
         while bucket and now-bucket[0]>settings.rate_limit_window_seconds:bucket.popleft()
         if len(bucket)>=settings.rate_limit_requests_per_window:return JSONResponse(status_code=429,content={"detail":"Too many requests. Try again later."},headers={"Retry-After":str(settings.rate_limit_window_seconds)})

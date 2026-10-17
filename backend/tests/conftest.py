@@ -17,6 +17,8 @@ def isolate_external_services(monkeypatch):
     monkeypatch.setattr(settings, "media_bucket", None)
     monkeypatch.setattr(settings, "gemini_api_key", None)
     monkeypatch.setattr(settings, "tokenrouter_api_key", None)
+    monkeypatch.setattr(settings, "email_autosend_enabled", False)
+    monkeypatch.setattr(settings, "email_transport", "smtp")
 
 @pytest.fixture()
 def db_factory(tmp_path):

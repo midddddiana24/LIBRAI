@@ -15,7 +15,15 @@ Common errors: `401` missing/expired/revoked credentials or QR grant, `403` insu
 | GET | `/auth/me` | Admin | none → safe admin profile | Rejects expired/revoked/inactive accounts. |
 | POST | `/auth/logout` | Admin | none → `{message}` | Persists JWT `jti` revocation and audits logout. |
 
-## QR
+## Student registration and ID-assisted input
+
+`POST /registrations` is public and rate-limited. It accepts `student_id`, `first_name`, `last_name`, `course`, `year_level`, optional `library_card_number`, and optional contact fields. It creates a **PENDING** member and returns HTTP 202 with a generic acknowledgement only. Duplicate identifiers receive the same acknowledgement and never update an existing member. Extra fields are rejected; clients cannot request ACTIVE status or choose a QR token.
+
+Staff use `GET /users?status=PENDING` to review requests and `PUT /users/{id}` with status ACTIVE to approve or INACTIVE to reject. These require admin authentication and are audited. Pending members cannot borrow, obtain a kiosk verification grant, or have a library QR issued. Campus student ID and library card number are separate identifiers; each has its own uniqueness constraint.
+
+OCR is performed locally in the browser using self-hosted Tesseract assets. There is no ID-photo OCR API or photo upload in this registration flow. Only reviewed form fields are submitted. OCR output is an editable draft, not identity or enrollment verification. Existing signed LIBRAI QR borrowing remains authoritative.
+
+## QR operations
 
 Administrators can retrieve the current QR without invalidating it with
 `GET /users/{id}/qr` and `GET /book-copies/{id}/qr`. The corresponding `POST`
@@ -140,3 +148,19 @@ email address; a later SMTP worker can send those queued emails.
 ## Compatibility notes for the Flet client
 
 The QR responses add `verification_token`. The updated frontend preserves it in structured session state and sends it only to borrow/return/reservation endpoints. The API continues returning both frontend-friendly aliases (`id`, `name`, `copy_id`, `available`) and explicit domain fields (`user_id`, `display_name`, `accession_number`, `availability`).
+
+
+## Email delivery administration
+
+- `POST /api/v1/users/{user_id}/email-qr`: staff only; active member with email required; queues the current library ID QR (202). It does not rotate the QR or send synchronously.
+- `GET /api/v1/notifications/admin/email-status`: staff only; API-process configuration flags, no secrets and no connectivity claim. A separate worker may have its own configuration.
+- `POST /api/v1/notifications/admin/email-deliveries/{delivery_id}/retry`: staff only; only FAILED rows can return to PENDING (202), other states return 409.
+- Staff creation of ACTIVE accounts and PENDING-to-ACTIVE approval queue `LIBRARY_ID` notifications when email exists. Other edits do not resend. Pending public registration never emails a QR.
+- See [Gmail setup and delivery semantics](gmail_notifications.md).
+
+### Gmail API delivery
+
+- `POST /api/v1/notifications/admin/email-deliveries/{delivery_id}/send`: staff only; requests background delivery of one PENDING email (202). Non-pending rows return 409; missing sender configuration returns 503. Refresh the delivery status to see the result.
+- `EMAIL_TRANSPORT=gmail_api` selects HTTPS delivery using private `GMAIL_OAUTH_FILE`. No OAuth tokens or credentials are returned by API endpoints.
+- `EMAIL_AUTOSEND_ENABLED` defaults false. When enabled, API lifespan polling processes up to five pending emails per cycle while the API is awake. Render sleep pauses polling; the Neon outbox persists.
+- Email configuration status includes transport, email_configured and autosend_enabled. These describe configuration, not successful Gmail authorization or inbox receipt.

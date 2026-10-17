@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/v1/registrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Registration */
+        post: operations["request_registration_api_v1_registrations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -102,6 +119,23 @@ export interface paths {
         /** Update User */
         put: operations["update_user_api_v1_users__user_id__put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{user_id}/email-qr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Email Qr */
+        post: operations["email_qr_api_v1_users__user_id__email_qr_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -732,6 +766,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications/admin/email-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Email Status */
+        get: operations["email_status_api_v1_notifications_admin_email_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/admin/email-deliveries/{delivery_id}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send Email */
+        post: operations["send_email_api_v1_notifications_admin_email_deliveries__delivery_id__send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/admin/email-deliveries/{delivery_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry Email */
+        post: operations["retry_email_api_v1_notifications_admin_email_deliveries__delivery_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notifications/admin/email-deliveries": {
         parameters: {
             query?: never;
@@ -1061,6 +1146,31 @@ export interface components {
             /** User Verification Token */
             user_verification_token?: string | null;
         };
+        /** RegistrationCreate */
+        RegistrationCreate: {
+            /** Student Id */
+            student_id: string;
+            /** Library Card Number */
+            library_card_number?: string | null;
+            /** First Name */
+            first_name: string;
+            /** Last Name */
+            last_name: string;
+            /** Course */
+            course: string;
+            /** Year Level */
+            year_level: string;
+            /** Email */
+            email?: string | null;
+            /** Contact Number */
+            contact_number?: string | null;
+            /**
+             * Status
+             * @default PENDING
+             * @constant
+             */
+            status: "PENDING";
+        };
         /** RenewRequest */
         RenewRequest: {
             /** User Id */
@@ -1106,6 +1216,8 @@ export interface components {
         UserCreate: {
             /** Student Id */
             student_id: string;
+            /** Library Card Number */
+            library_card_number?: string | null;
             /** First Name */
             first_name: string;
             /** Last Name */
@@ -1127,6 +1239,8 @@ export interface components {
         };
         /** UserUpdate */
         UserUpdate: {
+            /** Library Card Number */
+            library_card_number?: string | null;
             /** First Name */
             first_name?: string | null;
             /** Last Name */
@@ -1140,7 +1254,7 @@ export interface components {
             /** Contact Number */
             contact_number?: string | null;
             /** Status */
-            status?: ("ACTIVE" | "INACTIVE" | "SUSPENDED") | null;
+            status?: ("ACTIVE" | "INACTIVE" | "SUSPENDED" | "PENDING") | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -1164,6 +1278,39 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    request_registration_api_v1_registrations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistrationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     login_api_v1_auth_login_post: {
         parameters: {
             query?: never;
@@ -1253,7 +1400,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": unknown;
+                };
             };
             /** @description Validation Error */
             422: {
@@ -1270,6 +1419,7 @@ export interface operations {
         parameters: {
             query?: {
                 q?: string | null;
+                status?: ("ACTIVE" | "PENDING" | "INACTIVE" | "SUSPENDED") | null;
                 offset?: number;
                 limit?: number;
             };
@@ -1380,6 +1530,37 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    email_qr_api_v1_users__user_id__email_qr_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2830,6 +3011,88 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    email_status_api_v1_notifications_admin_email_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    send_email_api_v1_notifications_admin_email_deliveries__delivery_id__send_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                delivery_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_email_api_v1_notifications_admin_email_deliveries__delivery_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                delivery_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Camera, LoaderCircle, ScanText, Upload } from 'lucide-react'
 import type { Worker } from 'tesseract.js'
-import { parseIdCard, type CardKind, type IdDraft } from './idCardFields'
+import { cardScanHint, parseIdCard, type CardKind, type IdDraft } from './idCardFields'
 
 const labels: Record<keyof IdDraft, string> = { student_id: 'Campus student ID', library_card_number: 'Library card number', first_name: 'First name / middle initial', last_name: 'Last name / suffix', course: 'Course' }
 
@@ -43,7 +43,7 @@ export default function IdScanPanel({ onApply, disabled }: { onApply: (draft: Id
       context.drawImage(image, 0, 0, canvas.width, canvas.height); image.close()
       if (!alive()) return
       setPreview(URL.createObjectURL(file))
-      const { createWorker, OEM } = await import('tesseract.js')
+      const { createWorker, OEM, PSM } = await import('tesseract.js')
       worker = await createWorker('eng', OEM.LSTM_ONLY, {
         workerPath: `${location.origin}/ocr/worker.min.js`, corePath: `${location.origin}/ocr`, langPath: `${location.origin}/ocr`,
         workerBlobURL: false, cacheMethod: 'none',
@@ -51,11 +51,21 @@ export default function IdScanPanel({ onApply, disabled }: { onApply: (draft: Id
       })
       if (!alive()) return
       workerRef.current = worker
-      const result = await worker.recognize(canvas)
+      let result = await worker.recognize(canvas, { rotateAuto: true })
       if (!alive()) return
-      const fields = parseIdCard(result.data.text, kind)
+      let fields = parseIdCard(result.data.text, kind)
+      let hint = cardScanHint(result.data.text, kind)
+      if (!fields[kind === 'campus' ? 'student_id' : 'library_card_number'] && !hint) {
+        setMessage('Trying another reading mode for text around the photo...')
+        await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT })
+        result = await worker.recognize(canvas, { rotateAuto: true })
+        if (!alive()) return
+        fields = { ...fields, ...parseIdCard(result.data.text, kind) }
+        hint = cardScanHint(result.data.text, kind)
+        if (hint) fields = {}
+      }
       setDraft(fields)
-      setMessage(Object.keys(fields).length ? 'Check these suggestions against the card. OCR can misread names and numbers.' : 'No supported fields were found. Use a clear, upright photo of the front of the selected card, or type the details.')
+      setMessage(hint || (Object.keys(fields).length ? 'Check these suggestions against the card. OCR can misread names and numbers.' : result.data.text.trim() ? 'Text was detected, but the name and ID number could not be located. Crop the photo to the card edges, avoid glare, and check Card to read. You can also type the details below.' : 'No readable text was detected. Move closer, focus on the printed name and ID number, and avoid glare. You can also type the details below.'))
     } catch (error) {
       if (alive()) setMessage(error instanceof Error && /Choose|Photo dimensions|Image processing/.test(error.message) ? error.message : 'Could not read the photo. Try a clearer, upright photo or enter the details manually.')
     } finally {

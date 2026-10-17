@@ -25,6 +25,16 @@ Open **Admin → Library users → Pending registrations → Review request**. V
 
 The parser targets the supplied card layouts. It intentionally leaves uncertain/unsupported fields blank. Low-resolution photos, reflections, tilted cards, OCR punctuation errors, and different card layouts may require manual correction. There is no claim of perfect extraction from the actual submitted photographs.
 
+### If a scan finds no details
+
+1. Match **Card to read** to the photo: campus front or library borrower's card front. Read the two cards separately; their numbers can differ.
+2. Use the front, including the printed number and name. The back, portrait alone, barcode alone and renewal stamps cannot fill this form.
+3. Fill the photo with the card, keep it upright, and avoid reflections across the printed text. Crop excess background using the phone's photo editor if necessary.
+4. The scanner first reads the page layout, then tries scattered-text mode if it cannot locate the selected card number. It handles supported dash/apostrophe variants, wrapped library-number labels, and campus number/name text on one line.
+5. If suggestions remain incomplete, type the missing values into the form. The scanner never guesses missing or ambiguous digits.
+
+Wrong-card and back-of-card messages now explain which photo to select. Blank/unreadable images show different guidance from readable text whose fields could not be located. Exact-photo quality still needs confirmation with the photo that failed; synthetic OCR tests are not proof that every real card will scan.
+
 ## Data handling and authentication
 
 OCR runs in a browser worker. Worker, language data, and WASM engine files are served by LIBRAI itself, with no external OCR/CDN request at scan time. ID photos and full OCR text are not uploaded to the backend, sent to Gemini, or stored by this flow. The worker terminates and the image preview is released when the scan is discarded, applied, or the form closes. The kiosk's normal session timeout also closes registration.
@@ -33,7 +43,7 @@ Only submitted form fields are sent to `/api/v1/registrations`. Public requests 
 
 ## Verification
 
-Local results on 17 October 2026: **43 backend tests passed**, four parser tests passed, TypeScript/Vite build and lint passed, and the real OCR/isolated-backend browser flow passed. The eight-viewport design checks also passed after correcting the short-landscape Register layout. The migration check was against a temporary database, not Neon.
+Verification on 17 October 2026: the preceding full backend run passed **60 tests**. For the frontend OCR correction, **eight parser tests**, TypeScript/Vite build, lint and the real OCR/isolated-backend browser flow passed. The browser check includes an unreadable image, wrong selected card, campus number/name on one line, and a wrapped library-card number. Earlier eight-viewport checks passed after correcting the short-landscape Register layout. The migration check was against a temporary database, not Neon.
 
 - Backend tests cover registration, pending restrictions, authenticated approval/rejection, duplicate protection, separate library numbers, and request limits.
 - Parser tests use synthetic identities and verify suffix/name order, separate numbers, ambiguous-number rejection, and exclusion of renewal/emergency data.

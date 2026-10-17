@@ -1,10 +1,23 @@
 export type CardKind = 'campus' | 'library'
 export type IdDraft = Partial<Record<'student_id' | 'library_card_number' | 'first_name' | 'last_name' | 'course', string>>
 
+function normalized(text: string): string {
+  return text.normalize('NFKC').replace(/[\u2010-\u2015\u2212]/g, '-').replace(/[\u2018\u2019]/g, "'")
+}
+
+export function cardScanHint(text: string, kind: CardKind): string | null {
+  const value = normalized(text)
+  if (/STUDENT\s+INFORMATION|IN\s+CASE\s+OF\s+EMERGENCY|EMERGENCY\s+CONTACT|RENEWAL\s+CHART|BIRTHDAY/i.test(value)) return 'This looks like the back of a card. Photograph the front with the name and card number.'
+  const library = /BORROWER\s*'?S?\s*CARD/i.test(value)
+  if (kind === 'campus' && library) return "This looks like a library card. Choose Library borrower's card front, then select the photo again."
+  if (kind === 'library' && !library && /STUDENT\s*(?:ID|NUMBER)|\bCAMPUS\b|\bBS\s+INFORMATION/i.test(value)) return 'This looks like a campus ID. Choose Campus ID front, then select the photo again.'
+  return null
+}
+
 function splitName(value: string): Pick<IdDraft, 'first_name' | 'last_name'> {
   const name = value.replace(/^NAME\s*:?\s*/i, '').replace(/\s+/g, ' ').trim()
-  if (!/^[\p{L}\p{M} .,'’-]+$/u.test(name) || name.split(/\s+/).length < 2) return {}
-  if (/UNIVERSITY|CAMPUS|INFORMATION|TECHNOLOGY|SCHOOL|COLLEGE|SIGNATURE|PRESIDENT|IMPORTANT|ADDRESS|EMERGENCY/i.test(name)) return {}
+  if (!/^[\p{L}\p{M} .,'-]+$/u.test(name) || name.split(/\s+/).length < 2) return {}
+  if (/UNIVERSITY|CAMPUS|INFORMATION|TECHNOLOGY|SCHOOL|COLLEGE|SIGNATURE|PRESIDENT|IMPORTANT|ADDRESS|EMERGENCY/i.test(name) || /^(?:BS|BA|BACHELOR)\b/i.test(name)) return {}
   const suffix = /^(JR\.?|SR\.?|II|III|IV)$/i
   if (name.includes(',')) {
     const parts = name.split(',').map(p => p.trim()).filter(Boolean)
@@ -19,24 +32,30 @@ function splitName(value: string): Pick<IdDraft, 'first_name' | 'last_name'> {
   return words.length ? { first_name: words.join(' '), last_name: [last, ending].filter(Boolean).join(' ') } : {}
 }
 
-// Return only registration fields. Never infer identity, enrollment, or contact data.
+// Extract only printed registration fields; never repair digits or infer enrollment.
 export function parseIdCard(text: string, kind: CardKind): IdDraft {
-  const lines = text.normalize('NFKC').split(/\r?\n/).map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean)
+  if (cardScanHint(text, kind)) return {}
+  const lines = normalized(text).split(/\r?\n/).map(s => s.replace(/\s+/g, ' ').replace(/^[|\s]+|[|\s]+$/g, '')).filter(Boolean)
   const draft: IdDraft = {}
-  const numberPattern = /\b\d{2}\s*-\s*\d{3,8}\b/g
   if (kind === 'campus') {
-    const candidates = lines.flatMap((line, index) => /^(?:(?:STUDENT\s*(?:ID|NO\.?|NUMBER))\s*:?\s*)?\d{2}\s*-\s*\d{3,8}$/i.test(line) ? [{ value: line.match(numberPattern)![0].replace(/\s/g, ''), index }] : [])
+    const candidates = lines.flatMap((line, index) => {
+      const match = line.match(/^(?:(?:STUDENT\s*(?:ID|NO\.?|NUMBER)|ID\s*(?:NO\.?|NUMBER)?)[\s:#.-]*)?(\d{2}\s*-\s*\d{3,8})(?![\p{L}\d])(.*)$/iu)
+      if (!match || (match[2].trim() && !splitName(match[2].replace(/^[|:; ]+/, '')).first_name)) return []
+      return [{ value: match[1].replace(/\s/g, ''), index, name: match[2].replace(/^[|:; ]+/, '').trim() }]
+    })
     if (new Set(candidates.map(c => c.value)).size === 1) {
-      draft.student_id = candidates[0].value
-      for (const line of lines.slice(candidates[0].index + 1, candidates[0].index + 3)) {
+      const candidate = candidates[0]
+      draft.student_id = candidate.value
+      for (const line of [candidate.name, ...lines.slice(candidate.index + 1, candidate.index + 4)]) {
         const name = splitName(line)
         if (name.first_name) { Object.assign(draft, name); break }
       }
     }
-    const course = lines.find(line => /^(?:BS|BA|BACHELOR OF SCIENCE|BACHELOR OF ARTS)\s+[\p{L}]/iu.test(line) || /^BS[A-Z]{2,5}$/i.test(line))
+    const courses = lines.map(line => line.replace(/^COURSE\s*:?\s*/i, '').replace(/^B\.S\.\s*/i, 'BS '))
+    const course = courses.find(line => /^(?:BS|BA|BACHELOR OF SCIENCE|BACHELOR OF ARTS)\s+[\p{L}]/iu.test(line) || /^BS[A-Z]{2,5}$/i.test(line))
     if (course && course.length <= 150) draft.course = course
   } else {
-    const match = lines.join('\n').match(/BORROWER['’]?S?\s+CARD\s+(?:NO\.?|NUMBER)\s*:?\s*(\d{2}\s*-\s*\d{3,8})\b/i)
+    const match = lines.join('\n').match(/BORROWER\s*'?S?\s*CARD\s*(?:NO\.?|NUMBER|#)\s*[:#.]?\s*(\d{2}\s*-\s*\d{3,8})\b/i)
     if (match) draft.library_card_number = match[1].replace(/\s/g, '')
     const index = lines.findIndex(line => /^NAME(?:\s|:|$)/i.test(line))
     if (match && index >= 0) {

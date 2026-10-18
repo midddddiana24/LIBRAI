@@ -81,12 +81,17 @@ export default function KioskApp() {
 
   useEffect(() => {
     let alive = true
-    void Promise.all([health(), new Promise<void>(resolve => window.setTimeout(resolve, 800))])
-      .then(([value]) => { if (alive) { setOnline(value); setStarting(false) } })
+    void health(30_000).then(value => { if (alive) setOnline(value) })
+    return () => { alive = false }
+  }, [])
+
+  useEffect(() => {
+    if (starting) return
+    let alive = true
     const check = () => { void health().then(value => { if (alive) setOnline(value) }) }
     const timer = window.setInterval(check, 20_000)
     return () => { alive = false; window.clearInterval(timer) }
-  }, [])
+  }, [starting])
 
   const run = useCallback(async (action: () => Promise<void>) => {
     if (busy) return
@@ -169,10 +174,11 @@ export default function KioskApp() {
     setAiQuery('')
     await run(async () => {
       try {
-        const result = await api<{ context?: AIContext | null; fallback_used?: boolean; answer?: string; message?: string; books?: Book[]; interaction_id?: number }>('/ai/search', { method: 'POST', body: JSON.stringify({ query: question, context: aiContext, ...(user ? { user_id: user.id, user_verification_token: user.verification_token } : {}) }) })
+        const history = chatTurns.filter(turn => turn.status === 'done' && turn.responseType !== 'account').slice(-4).flatMap(turn => [{ role: 'user', content: turn.question }, { role: 'assistant', content: turn.answer.slice(0, 2500) }])
+        const result = await api<{ context?: AIContext | null; fallback_used?: boolean; answer?: string; message?: string; books?: Book[]; interaction_id?: number; response_type?: string; language?: string; account?: ChatTurn['account'] }>('/ai/search', { method: 'POST', body: JSON.stringify({ query: question, context: aiContext, history, ...(user ? { user_id: user.id, user_verification_token: user.verification_token } : {}) }) }, undefined, 60_000)
         if (generation !== aiGeneration.current) return
         setAiContext(result.context || null)
-        setChatTurns(turns => turns.map(turn => turn.id === id ? { ...turn, answer: result.answer || result.message || 'No answer was returned. Please try again.', books: result.books || [], interactionId: result.interaction_id, fallback: !!result.fallback_used, status: 'done' } : turn))
+        setChatTurns(turns => turns.map(turn => turn.id === id ? { ...turn, answer: result.answer || result.message || 'No answer was returned. Please try again.', books: result.books || [], interactionId: result.interaction_id, responseType: result.response_type, language: result.language || 'en', account: result.account, fallback: !!result.fallback_used, status: 'done' } : turn))
       } catch (cause) {
         if (generation !== aiGeneration.current) return
         setChatTurns(turns => turns.map(turn => turn.id === id ? { ...turn, answer: 'Message not sent. Check the connection and try again.', status: 'failed' } : turn))
@@ -216,11 +222,11 @@ export default function KioskApp() {
     }
   }
 
-  function readAloud(text: string) {
+  function readAloud(text: string, language?: string) {
     if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) { setVoiceNotice('Read aloud is unavailable on this device.'); return }
     window.speechSynthesis.cancel()
     const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = /\b(manghiram|humiram|ibalik|libro|aklat|hanap|pahiram)\b/i.test(text) ? 'fil-PH' : 'en-US'
+    utterance.lang = language ? (language === 'en' ? 'en-PH' : 'fil-PH') : /\b(manghiram|humiram|ibalik|libro|aklat|hanap|pahiram)\b/i.test(text) ? 'fil-PH' : 'en-US'
     utterance.rate = 0.94
     utterance.onstart = () => setSpeaking(true)
     utterance.onend = () => setSpeaking(false)
@@ -245,7 +251,7 @@ export default function KioskApp() {
 
   const privateSession = !!(user || copy || activeReturn || receipt || chatTurns.length)
 
-  if (starting) return <StartupScreen />
+  if (starting) return <StartupScreen stage={online === null ? 'connecting' : online ? 'ready' : 'offline'} onReady={() => setStarting(false)} onRetry={() => { setOnline(null); void health(30_000).then(setOnline) }} />
 
   return <div className="app kiosk" ref={screenRef}>
     <header className="topbar"><div className="brand"><img className="brand-mark" src="/images/librai-symbol-v2.png" alt="" /><span><strong>LIBRAI</strong><small>Library kiosk</small></span></div><div className="top-actions"><span className={`status ${online ? 'good' : 'bad'}`}>{online === null ? 'Connecting' : online ? 'Library online' : 'Library offline'}</span><button type="button" onClick={endSession}>End session</button></div></header>
@@ -262,7 +268,7 @@ export default function KioskApp() {
       {view === 'borrow' && <BorrowFlow user={user} copy={copy} receipt={receipt} busy={busy} onUser={token => void scanUser(token)} onBook={token => void scanBorrowBook(token)} onChangeUser={changeBorrowUser} onChangeBook={changeBorrowBook} onConfirm={() => void confirmBorrow()} onFinish={endSession} />}
       {view === 'return' && <ReturnFlow copy={copy} activeReturn={activeReturn} receipt={receipt} busy={busy} onBook={token => void scanReturnBook(token)} onChangeBook={changeReturnBook} onConfirm={() => void confirmReturn()} onFinish={endSession} />}
       {view === 'account' && <><div className="page-heading"><div><p className="eyebrow">Private session</p><h1>My account</h1></div><button onClick={() => setView('home')}>Home</button></div>{user ? <AccountPanel user={user} /> : <div className="panel"><p>Scan your library ID to see your borrowing history.</p><QrCapture label="your library ID" busy={busy} onToken={token => void scanUser(token)} /></div>}</>}
-      {view === 'assistant' && <><div className="page-heading"><div><h1>Ask LIBRAI</h1><p>Your library chat</p></div><button onClick={() => setView('home')}>Home</button></div><KioskChat turns={chatTurns} query={aiQuery} busy={busy} offline={online === false} personalized={!!user} topic={aiContext ? [aiContext.topics.join(', ') || 'all topics', aiContext.level, aiContext.available_only ? 'available only' : ''].filter(Boolean).join(' / ') : ''} sessionKey={chatResetKey} speaking={speaking} onQuery={setAiQuery} onAsk={text => void askAssistant(text)} onClear={clearAssistant} onBook={id => void showBook(id)} onRead={readAloud} onStop={stopReading} onFeedback={(id, helpful) => void sendFeedback(id, helpful)} /></>}
+      {view === 'assistant' && <><div className="page-heading"><div><h1>Ask LIBRAI</h1><p>Your library chat</p></div><button onClick={() => setView('home')}>Home</button></div><KioskChat turns={chatTurns} query={aiQuery} busy={busy} offline={online === false} personalized={!!user} topic={aiContext ? [aiContext.topics.join(', ') || 'all topics', aiContext.level, aiContext.available_only ? 'available only' : ''].filter(Boolean).join(' / ') : ''} sessionKey={chatResetKey} speaking={speaking} onQuery={setAiQuery} onAsk={text => void askAssistant(text)} onClear={clearAssistant} onBook={id => void showBook(id)} onRead={readAloud} onStop={stopReading} onAccount={() => { setView('account'); setError('') }} onFeedback={(id, helpful) => void sendFeedback(id, helpful)} /></>}
       {view === 'discover' && <section className="kiosk-discovery"><div className="page-heading"><div><p className="eyebrow">Book discovery</p><h1>Explore titles</h1></div><button onClick={() => setView('home')}>Home</button></div><p>{user ? 'Recommended titles use your borrowing history when available.' : 'Scan your ID in My account for personal recommendations.'}</p><div className="inline tabs">{(['recommended', 'popular', 'new'] as const).map(kind => <button key={kind} className={discoverKind === kind ? 'primary' : ''} onClick={() => void discover(kind)} disabled={busy}>{kind === 'new' ? 'New arrivals' : kind === 'popular' ? 'Popular' : 'Recommended'}</button>)}</div><div className="book-grid">{discoverBooks.map(book => <button className="book-card" key={book.id} onClick={() => void showBook(book.id)}><div className="cover-placeholder">LIBRAI</div><strong>{book.title}</strong><span>{book.author}</span></button>)}</div>{!discoverBooks.length && <div className="empty">No suggestions available right now.</div>}</section>}
     </main><footer>LIBRAI · Library services <span>Ask a librarian if you need help.</span></footer>
   </div>

@@ -1,6 +1,6 @@
 # LIBRAI 1.6 Android update
 
-**Newer patch available:** use [LIBRAI 1.6.2](release_1.6.2.md) (version 1.6.2/code 10) for the updated home controls and discovery spacing. The 1.6.0 details below are the earlier build record.
+**Newer release available:** use [LIBRAI 1.7.0](release_1.7.0.md) (version 1.7.0/code 11) for conversational chat and the book-opening startup. The 1.6.0 details below are the earlier build record.
 
 Version **1.6.0**, Android version code **8**, package `ai.librai.kiosk`.
 API: `https://librai-api-free-pg.onrender.com/api/v1`.

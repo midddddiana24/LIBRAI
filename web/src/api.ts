@@ -46,9 +46,9 @@ export async function api<T>(path: string, options: RequestInit = {}, token?: st
   }
 }
 
-export async function health(): Promise<boolean> {
+export async function health(timeoutMs = 4000): Promise<boolean> {
   try {
-    const response = await fetch(`${API_ORIGIN}/health`, { signal: AbortSignal.timeout(4000), cache: 'no-store' })
+    const response = await fetch(`${API_ORIGIN}/health`, { signal: AbortSignal.timeout(timeoutMs), cache: 'no-store' })
     return response.ok
   } catch { return false }
 }

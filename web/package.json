@@ -20,7 +20,8 @@
     "test:borrow-ui": "node scripts/borrow-ui-smoke.mjs",
     "test:id-fields": "node --test src/idCardFields.test.mjs",
     "test:registration-ui": "node scripts/registration-ui-smoke.mjs",
-    "test:ai-ui": "node scripts/ai-ui-smoke.mjs"
+    "test:ai-ui": "node scripts/ai-ui-smoke.mjs",
+    "test:startup-ui": "node scripts/startup-ui-smoke.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

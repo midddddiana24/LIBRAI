@@ -1,10 +1,24 @@
 # LIBRAI AI assistant
 
+## Conversation upgrade - 18 October 2026
+
+Ask LIBRAI now separates study explanations, clarifying questions, catalog requests, verified library policies and private account lookups. Gemini returns a validated intent plan and may answer study questions directly. Library stock, shelves, policy values and account data still come from backend services, not provider-written claims.
+
+The kiosk sends up to four completed question/answer pairs (eight messages, 2,500 characters each) as short session history. Account lookup turns are excluded. The provider receives the latest question and recent non-account conversation; do not enter passwords or unnecessary personal data. History clears with End session, inactivity and member changes. Existing server-side interaction analytics remain; account response summaries are redacted to `Verified account summary.`
+
+English, Filipino and mixed technical language are supported. Deterministic policy and account templates also support Filipino. The response language selects read-aloud language, but installed tablet voices still affect pronunciation.
+
+After scanning an approved ID, ask **Show my loans**, **When are my books due?** or **Can I renew my books?**. The backend checks the signed member grant, queries only that member's active/overdue loans, shows recorded unpaid fines, and calculates renewal eligibility using loan status, actual due date, renewal count and other members' waiting reservations. **Open My account** continues to the existing confirmation flow; chat never renews, borrows, returns, approves accounts or sends email.
+
+If conversational AI fails, study questions receive an explicit unavailable response rather than unrelated books. Catalog matching and known policy/account lookups remain available. General study answers are generated content and can be wrong; they are labelled separately from library facts. The assistant cannot browse the web, verify citations, or summarize unseen full book contents. No vector database or new infrastructure was added.
+
+Earlier verification sections below describe prior releases; see [release 1.7.0](release_1.7.0.md) for this upgrade.
+
 ## What changed
 
 1. Search requires a catalog metadata match before availability, borrowing history or popularity can boost a title. It never substitutes unrelated available books when a topic has no matches. Reading-level filters require explicit level words in the title, keywords, subjects, category or description.
 2. Scan your library ID in **My account**, select **Home**, then use **Discover books** or **Ask LIBRAI**. The kiosk sends the recent verification grant with the member ID. Recommended titles prefer categories in that member's borrowing history; without history, suggestions are general. No member names, email addresses or borrowing records are sent to the ranking provider.
-3. Ask about borrowing limits, loan periods, renewals, reservation pickup or overdue fines. Answers read the current admin settings on every request. Unknown policies such as opening hours refer to staff. Answers are currently in English; English and Filipino question patterns are supported.
+3. Ask about borrowing limits, loan periods, renewals, reservation pickup or overdue fines. Answers read the current admin settings on every request. Unknown policies such as opening hours refer to staff. English and Filipino templates are supported.
 4. After a subject search, ask **Show easier ones**, **Only available books**, **Mas madali lang**, **Include unavailable**, or **Remove level filter**. The current topic and filters are displayed. **Start a new question** clears the context. New topics replace it. Policy questions preserve it.
 5. **End session**, the 90-second inactivity timeout, changing the scanned member, or completing a borrowing clears personal suggestions and context. Late AI responses cannot restore them. Context is in React memory, not browser storage. Existing API search/interaction analytics still apply.
 6. Gemini receives a JSON schema including allowed book IDs. Both provider paths validate and deduplicate IDs. Provider-written claims are not displayed: titles, counts and shelves come from catalog serialization. A valid empty response stays empty; provider failures use matching local candidates and show a fallback notice.
@@ -51,7 +65,7 @@ Record spoken phrase, actual transcript, corrected transcript, language selectio
 
 ## Known limits
 
-This is bounded metadata matching with a small bilingual synonym map, not unrestricted semantic retrieval or general conversational memory. Level accuracy depends on catalog tagging. Available-copy counts describe stock at response time, not a reservation or promise that a later borrow succeeds. Provider validation does not prove every relevance judgment correct. Feedback is stored for staff review; it does not automatically train a model.
+Catalog retrieval uses bounded metadata matching with a small bilingual synonym map. Reading-level accuracy depends on catalog tagging. Study conversations use bounded recent history, with no permanent conversational memory. Available-copy counts describe stock at response time, not a reservation or promise that a later borrow succeeds. Provider validation does not prove every relevance judgment correct. Feedback is stored for staff review; it does not automatically train a model.
 
 ## Verification result - 17 October 2026
 
@@ -69,7 +83,7 @@ Schema reference: [Google Gemini structured outputs](https://ai.google.dev/gemin
 
 Ask LIBRAI now displays a dedicated library chat. It retains up to 20 question/reply pairs for the current kiosk session, including book cards, provider-fallback notices and feedback per reply. Suggested opening questions, a loading reply, editable voice dictation, read aloud and retry are available. Book details have a **Back to chat** action. No floating widget or admin chatbot was added.
 
-**Start a new question** clears the displayed messages and topic context. The same clearing occurs on End session, inactivity or member changes. Message text is rendered as plain React text; model output cannot insert HTML. The conversation transcript stays in memory; the API still records its existing search and interaction analytics. The backend receives the current question, bounded topic/level/availability context and an optional verified member grant, not the full message transcript. This supports library follow-ups, not unrestricted conversational memory or general web research.
+**Start a new question** clears the displayed messages and topic context. The same clearing occurs on End session, inactivity or member changes. Message text is rendered as plain React text; model output cannot insert HTML. Displayed history stays in React memory; the API also records interaction analytics. The backend receives the current question, bounded topic/level/availability context, up to eight recent non-account messages and an optional verified member grant. It supports study follow-ups and library help, with no general web research.
 
 Borrowing, return and registration procedure questions use the actual existing kiosk workflows. The bot does not execute transactions or approve registrations. Staff approval and QR confirmation remain required.
 

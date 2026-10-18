@@ -3639,6 +3639,14 @@
               }
             ]
           },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMessage"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "History"
+          },
           "query": {
             "type": "string",
             "maxLength": 1000,
@@ -4113,6 +4121,30 @@
           "name"
         ],
         "title": "CategoryCreate"
+      },
+      "ChatMessage": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 2500,
+            "minLength": 1,
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "ChatMessage"
       },
       "CopiesCreate": {
         "properties": {

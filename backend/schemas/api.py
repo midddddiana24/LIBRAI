@@ -143,8 +143,14 @@ class AIContext(BaseModel):
     available_only: bool = False
 
 
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=2500)
+
+
 class AIRequest(BaseModel):
     context: AIContext | None = None
+    history: list[ChatMessage] = Field(default_factory=list, max_length=8)
     query: str = Field(min_length=2, max_length=1000)
     user_id: int | None = None
     user_verification_token: str | None = None

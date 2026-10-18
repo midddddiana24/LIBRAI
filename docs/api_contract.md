@@ -166,3 +166,9 @@ The QR responses add `verification_token`. The updated frontend preserves it in 
 - Email configuration status includes transport, email_configured and autosend_enabled. These describe configuration, not successful Gmail authorization or inbox receipt.
 
 See [AI assistant behavior and verification](ai_assistant.md) for matching limits, session privacy, policy answers and physical voice acceptance checks.
+
+### Conversational assistant (1.7.0)
+
+`POST /api/v1/ai/search` accepts optional `history` with at most eight `{role: "user" | "assistant", content: string}` messages, each 1–2,500 characters. Only the current `query` (2–1,000 characters), bounded history and catalog context go to the conversation provider. History cannot grant authority. Supplying a `user_id` always requires a valid matching `user_verification_token`.
+
+`response_type` distinguishes `conversation`, `clarify`, `catalog`, `policy`, and `account`. `language` is `en`, `fil` or `mixed` on new routed replies. Verified account replies may include `account.loans` (title, ISO due date, renewal eligibility/note) and `account.unpaid_fine_cents`. Client history excludes account replies. Policy values, library books and account records are server-derived; model plans cannot execute writes. Provider outage remains a normal reply with `fallback_used=true` for study questions, while local library lookups continue.

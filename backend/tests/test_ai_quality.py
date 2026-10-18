@@ -43,7 +43,7 @@ def test_policies_read_changed_staff_settings_without_ai(client, db_factory, mon
     with db_factory() as db:
         db.add_all([SystemSetting(key="BORROWING_LIMIT", value="5"), SystemSetting(key="BORROWING_PERIOD_DAYS", value="14"), SystemSetting(key="OVERDUE_FINE_PER_DAY_CENTS", value="125")])
         db.commit()
-    assert "5 active loans" in ask(client, "Ilang libro ang puwedeng hiramin?")["answer"]
+    assert "hanggang 5 libro" in ask(client, "Ilang libro ang puwedeng hiramin?")["answer"]
     assert "14 days" in ask(client, "How many days can I borrow a book?")["answer"]
     assert "PHP 1.25" in ask(client, "Magkano ang multa?")["answer"]
     assert "not overdue" in ask(client, "Can I renew?")["answer"]
@@ -99,7 +99,7 @@ def test_personalization_requires_grant_and_uses_history(client, db_factory):
 
 @pytest.mark.parametrize("query,expected", [
     ("How do I borrow a book?", "scan your approved library ID"),
-    ("Paano manghiram?", "scan your approved library ID"),
+    ("Paano manghiram?", "i-scan ang approved library ID"),
     ("How do I return a book?", "confirm the return"),
     ("How do I register?", "staff approval"),
 ])

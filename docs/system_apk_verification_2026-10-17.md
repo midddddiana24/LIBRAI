@@ -1,6 +1,6 @@
 # System and APK verification - 17 October 2026
 
-**Newer UI patch:** see [LIBRAI 1.6.2](release_1.6.2.md) for the updated home controls, discovery spacing and APK download. Earlier 1.6.1 results below remain a historical verification record.
+**Newer release:** see [LIBRAI 1.7.0](release_1.7.0.md) for conversational chat, the book-opening startup and the latest APK. Earlier 1.6.1 results below remain a historical verification record.
 
 ## Decision
 

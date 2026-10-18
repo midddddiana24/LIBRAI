@@ -986,6 +986,8 @@ export interface components {
         /** AIRequest */
         AIRequest: {
             context?: components["schemas"]["AIContext"] | null;
+            /** History */
+            history?: components["schemas"]["ChatMessage"][];
             /** Query */
             query: string;
             /** User Id */
@@ -1104,6 +1106,16 @@ export interface components {
             name: string;
             /** Description */
             description?: string | null;
+        };
+        /** ChatMessage */
+        ChatMessage: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant";
+            /** Content */
+            content: string;
         };
         /** CopiesCreate */
         CopiesCreate: {

@@ -5,12 +5,13 @@ from backend.core.database import get_db
 from backend.core.security import verify_kiosk_grant
 from backend.schemas.api import AIFeedbackRequest,AIRequest,RecommendRequest
 from backend.models.entities import AIFeedback,AIInteraction
-from backend.services.recommendation_service import ai_search,recommendations
+from backend.services.recommendation_service import recommendations
+from backend.services.assistant_service import chat_reply
 router=APIRouter(prefix="/ai",tags=["AI Assistant"])
 @router.post("/search")
 def search(payload:AIRequest,db:Session=Depends(get_db)):
     if payload.user_id:verify_kiosk_grant(payload.user_verification_token,payload.user_id)
-    return ai_search(db,payload.query,payload.user_id,payload.context.model_dump() if payload.context else None)
+    return chat_reply(db,payload.query,payload.user_id,payload.context.model_dump() if payload.context else None,[m.model_dump() for m in payload.history])
 @router.post("/recommend")
 def recommend(payload:RecommendRequest,db:Session=Depends(get_db)):
     if payload.user_id:verify_kiosk_grant(payload.user_verification_token,payload.user_id)

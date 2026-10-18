@@ -14,7 +14,7 @@ Version **1.7.0**, code **11**, package `ai.librai.kiosk`.
 
 Local APK: `generated/releases/LIBRAI-1.7.0-debug.apk`.
 
-Download after publication: [LIBRAI 1.7.0 APK](https://github.com/midddddiana24/LIBRAI/releases/download/v1.7.0/LIBRAI-1.7.0-debug.apk).
+Published download: [LIBRAI 1.7.0 APK](https://github.com/midddddiana24/LIBRAI/releases/download/v1.7.0/LIBRAI-1.7.0-debug.apk).
 
 On the tablet, open the downloaded APK and choose **Update** over the existing debug-signed app. Website deployment does not update installed APK assets automatically. Production signing remains skipped at the user's request. Physical tablet microphone, camera, speaker and animation performance checks remain manual.
 
@@ -34,3 +34,12 @@ Built-in image generation produced `web/public/images/librai-startup-book.png`. 
 - Responsive/navigation regression passed eight sizes, 320 × 740 through 1440 × 1000, including both tablet orientations.
 - Final Gradle output: `BUILD SUCCESSFUL in 45s`. `apksigner verify` passed with the same debug certificate as the previous APK. `aapt dump badging` confirms 1.7.0/code 11.
 - APK: 49,574,026 bytes; SHA-256 `1ef68daa631cd3c5631906c40a4ad9165edb0e34aaec7b51920a89d21f26cac4`. Packaged HTML, JavaScript, CSS and startup stylesheet match the final web build byte for byte. Startup art and the live HTTPS API are present; Gmail OAuth/client-secret files are absent.
+
+## Public verification - 18 October 2026
+
+- Published application commit `017d9d4` to `online-admin-postgres`. Render serves `index-b2E3vuo2.js`; the API's public OpenAPI schema includes the new bounded history field.
+- Real public browser chat passed: English database explanation; simpler follow-up with two previous messages; Filipino Python/Java comparison; research clarification; one beginner Python catalog match whose ID exists in the public catalog; unverified account request gives scan instructions. The live explanation/comparison requests returned `fallback_used=false` and no book cards.
+- Public browser checks passed at 320, 375, 414 and 768 px for chat overflow. End session removed the messages. A synthetic member ID without a grant returned HTTP 401. Valid personal account records were tested only against isolated fixtures, not real production members.
+- These public requests created normal AI/search analytics only. No live circulation, member editing, registration approval or email sending was performed as part of the checks.
+- GitHub release `v1.7.0` is public. Its asset size and SHA-256 digest match the verified local file; a public range download returned HTTP 206 and an APK ZIP signature.
+- Remaining: install this update and test actual microphone, camera, speaker and animation smoothness on the intended tablet. The build remains debug-signed; release signing was previously declined.

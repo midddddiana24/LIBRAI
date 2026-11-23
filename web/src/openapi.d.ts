@@ -2344,6 +2344,7 @@ export interface operations {
                 user_id?: number | null;
                 verification_token?: string | null;
                 status?: string | null;
+                overdue?: boolean;
                 offset?: number;
                 limit?: number;
             };

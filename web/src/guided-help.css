@@ -1,0 +1,17 @@
+﻿/* Nonmodal coaching leaves the real workflow in control. */
+.help-layer{position:fixed;inset:0;z-index:10000;pointer-events:none}
+.help-shade{position:fixed;inset:0;pointer-events:none;fill:oklch(20% .03 260 / 48%);animation:help-fade 180ms var(--ease-out)}
+.help-highlight{position:fixed;pointer-events:none;border:3px solid var(--color-accent);border-radius:var(--radius-input);animation:help-pulse 600ms var(--ease-out) 1}
+.help-panel{position:fixed;overflow:auto;overscroll-behavior:contain;padding:20px;background:var(--color-paper);color:var(--color-ink);border:1px solid var(--color-rule);border-radius:var(--radius-panel);pointer-events:auto;box-shadow:0 8px 24px var(--color-shadow);animation:help-enter 220ms var(--ease-out)}
+.help-panel h2{font-size:1.15rem;margin:16px 0 8px}.help-panel p{line-height:1.45;margin:12px 0}.help-panel button,.help-panel select,.help-launch{min-height:48px}
+.help-toolbar,.help-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.help-toolbar{justify-content:space-between;margin-bottom:12px}.help-toolbar strong{flex:1 1 100%}.help-toolbar button{flex:1;padding-inline:10px}.help-panel.is-minimized{padding:12px}.help-panel.is-minimized .help-toolbar{margin:0}.help-panel.is-minimized .help-toolbar strong{font-size:.9rem}
+.help-panel label{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.help-wait{color:var(--color-muted);font-size:.9rem}.help-panel:focus-visible,.help-panel button:focus-visible,.help-panel select:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px}
+.help-task-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-block:12px}.help-task-list button{overflow-wrap:anywhere}
+.help-progress{list-style:none;padding:0;margin:12px 0;display:flex;gap:8px;justify-content:space-between}.help-progress li{display:flex;flex:1;flex-direction:column;align-items:center;gap:4px;text-align:center;font-size:.75rem;color:var(--color-muted)}.help-progress li span{display:grid;place-items:center;min-width:26px;min-height:26px;border:1px solid var(--color-rule);border-radius:50%;font-weight:700}.help-progress [aria-current=step]{color:var(--color-ink);font-weight:700}.help-progress [aria-current=step] span,.help-progress .is-complete span{background:var(--color-accent);color:var(--color-paper)}
+body:has(.help-layer) .app{padding-bottom:var(--help-reserved-space,0px)}
+body:has(.help-layer) [data-help-end]{position:relative;z-index:10001}
+body:has([aria-modal="true"], dialog[open], [data-help-scanning="true"]) .help-layer{visibility:hidden}
+@keyframes help-fade{from{opacity:0}to{opacity:1}}@keyframes help-enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes help-pulse{50%{opacity:.55}}
+@media(prefers-reduced-motion:reduce){.help-shade,.help-highlight,.help-panel{animation:none}}
+@media(max-width:599px){.help-panel{padding:16px}.help-actions button{flex:1}}
+

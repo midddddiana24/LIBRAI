@@ -1,5 +1,7 @@
 # System and APK verification - 17 October 2026
 
+**Latest audit:** [22 November 2026 verification](system_apk_verification_2026-11-22.md). Core tests pass, but that audit found intermittent live AI failures and rejected local Gmail OAuth authorization; physical tablet acceptance remains pending.
+
 **Newer release:** see [LIBRAI 1.7.0](release_1.7.0.md) for conversational chat, the book-opening startup and the latest APK. Earlier 1.6.1 results below remain a historical verification record.
 
 ## Decision

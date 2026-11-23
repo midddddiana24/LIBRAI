@@ -1,0 +1,10 @@
+﻿.member-form .member-section { min-width: 0; margin: 0; grid-column: 1 / -1; padding: var(--space-lg, 24px); border: 1px solid var(--color-rule, #c5d6d1); border-radius: var(--radius-panel, 12px); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md, 16px); }
+.member-section legend { font-weight: 700; padding-inline: var(--space-sm, 8px); }
+.member-field { display: grid; align-content: start; gap: var(--space-xs, 6px); min-width: 0; }
+.member-field input { width: 100%; }
+.member-field input[aria-invalid="true"] { border-color: var(--color-error, #9d2f39); }
+.member-field-help, .member-field-error { margin: 0; font-size: var(--text-sm, .9rem); }
+.member-field-help { color: var(--color-muted, #5e7779); }
+.member-field-error { color: var(--color-error, #9d2f39); }
+.member-review-section > p { grid-column: 1 / -1; }
+@media (max-width: 650px) { .member-form .member-section { grid-template-columns: minmax(0, 1fr); padding: var(--space-md, 16px); } }

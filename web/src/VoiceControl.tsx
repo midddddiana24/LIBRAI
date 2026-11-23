@@ -1,3 +1,4 @@
+import {useKioskLanguage} from './kioskLanguage'
 import { useEffect, useRef, useState } from 'react'
 import { LoaderCircle, Mic, Square } from 'lucide-react'
 import { api } from './api'
@@ -16,6 +17,7 @@ function recordingType(): string {
 }
 
 export default function VoiceControl({ label, disabled = false, confirmBeforeUse = false, onTranscript }: Props) {
+  const {t}=useKioskLanguage()
   const [status, setStatus] = useState<'idle' | 'requesting' | 'listening' | 'transcribing'>('idle')
   const [message, setMessage] = useState('')
   const [language, setLanguage] = useState('auto')
@@ -116,12 +118,12 @@ export default function VoiceControl({ label, disabled = false, confirmBeforeUse
   }
 
   return <div className="voice-control">
-    <label><span className="voice-language-label">Speech language</span> <select value={language} disabled={disabled || status !== 'idle'} onChange={event => setLanguage(event.target.value)}><option value="auto">English / Filipino (auto)</option><option value="en">English</option><option value="fil">Filipino</option></select></label>
+    <label><span className="voice-language-label">{t('Speech language','Wika ng pagsasalita')}</span> <select value={language} disabled={disabled || status !== 'idle'} onChange={event => setLanguage(event.target.value)}><option value="auto">English / Filipino (auto)</option><option value="en">English</option><option value="fil">Filipino</option></select></label>
     <button type="button" className={status === 'listening' ? 'voice-button listening' : 'voice-button'} disabled={disabled || status === 'requesting' || status === 'transcribing'} onClick={status === 'listening' ? stop : () => void start()}>
       {status === 'listening' ? <Square aria-hidden="true" /> : status === 'requesting' || status === 'transcribing' ? <LoaderCircle className="loading-spinner" aria-hidden="true" /> : <Mic aria-hidden="true" />}
-      <span>{status === 'listening' ? 'Stop recording' : status === 'requesting' ? 'Connecting microphone…' : status === 'transcribing' ? 'Transcribing…' : label}</span>
+      <span>{status === 'listening' ? t('Stop recording','Itigil ang recording') : status === 'requesting' ? 'Connecting microphone…' : status === 'transcribing' ? 'Transcribing…' : label}</span>
     </button>
     <span className="voice-message" role="status" aria-live="polite">{message || (status === 'listening' ? 'Listening. Speak now, then tap Stop.' : '')}</span>
-    {draft !== null && <div className="voice-review"><label htmlFor="voice-recognized-words">Words heard</label><input id="voice-recognized-words" value={draft} onChange={event => setDraft(event.target.value)} /><div><button type="button" className="primary" disabled={!draft.trim()} onClick={() => onTranscriptRef.current(draft.trim())}>Run command</button><button type="button" onClick={() => void start()}>Try again</button></div></div>}
+    {draft !== null && <div className="voice-review"><label htmlFor="voice-recognized-words">{t('Words heard','Mga salitang narinig')}</label><input id="voice-recognized-words" value={draft} onChange={event => setDraft(event.target.value)} /><div><button type="button" className="primary" disabled={!draft.trim()} onClick={() => onTranscriptRef.current(draft.trim())}>{t('Run command','Patakbuhin')}</button><button type="button" onClick={() => void start()}>{t('Try again','Subukan ulit')}</button></div></div>}
   </div>
 }

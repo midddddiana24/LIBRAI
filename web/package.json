@@ -21,7 +21,10 @@
     "test:id-fields": "node --test src/idCardFields.test.mjs",
     "test:registration-ui": "node scripts/registration-ui-smoke.mjs",
     "test:ai-ui": "node scripts/ai-ui-smoke.mjs",
-    "test:startup-ui": "node scripts/startup-ui-smoke.mjs"
+    "test:startup-ui": "node scripts/startup-ui-smoke.mjs",
+    "test:shared-ux": "node scripts/shared-ux-smoke.mjs",
+    "test:admin-ux": "node scripts/admin-ux-smoke.mjs",
+    "test:member-ux": "node scripts/member-account-ux-smoke.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

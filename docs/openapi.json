@@ -1642,6 +1642,16 @@
             }
           },
           {
+            "name": "overdue",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Overdue"
+            }
+          },
+          {
             "name": "offset",
             "in": "query",
             "required": false,

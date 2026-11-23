@@ -1,3 +1,7 @@
+import GuidedHelp from './GuidedHelp'
+import AppInfo from './AppInfo'
+import { AdminConfirmation, AdminPagination, AdminTable, StatusBadge, type Confirmation, type AdminColumn } from './AdminUx'
+import { adminValue } from './adminValue'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowDownLeft, ArrowUpRight, BarChart3, BookOpen, Bookmark, Check, ChevronRight, CircleUserRound, ClipboardList, Clock3, LayoutDashboard, LoaderCircle, LogIn, LogOut, Mail, Menu, Plus, Receipt, RefreshCw, Settings2, ShieldCheck, UsersRound, X } from 'lucide-react'
 import { ApiError, api, health, mediaUrl, type Book, type Page } from './api'
@@ -27,6 +31,15 @@ const metrics = [
   { label: 'Library users', key: 'registered_users', Icon: UsersRound },
   { label: 'Reservations', key: 'active_reservations', Icon: Bookmark },
 ]
+const recordColumns: Partial<Record<Section, AdminColumn[]>> = {
+  borrowings: [['transaction_id', 'Loan'], ['user_name', 'Member'], ['student_id', 'Student ID'], ['book_title', 'Book'], ['due_at', 'Due date'], ['status', 'Status']].map(([key, label]) => ({ key, label, ...(key === 'status' ? { render: (row: Row) => <StatusBadge value={['active', 'overdue'].includes(String(row.status)) && new Date(String(row.due_at)).getTime() < Date.now() ? 'overdue' : row.status} /> } : {}) })),
+  returns: [['transaction_id', 'Return'], ['user_name', 'Member'], ['student_id', 'Student ID'], ['book', 'Book'], ['returned_at', 'Returned'], ['status', 'Status']].map(([key, label]) => ({ key, label })),
+  reservations: [['id', 'Reservation'], ['user_name', 'Member'], ['student_id', 'Student ID'], ['book_title', 'Book'], ['reserved_at', 'Reserved'], ['status', 'Status']].map(([key, label]) => ({ key, label })),
+  fines: [['id', 'Fine'], ['user_id', 'Member ID'], ['book_title', 'Book'], ['amount', 'Amount'], ['reason', 'Reason'], ['status', 'Status'], ['assessed_at', 'Assessed']].map(([key, label]) => ({ key, label })),
+  email: [['id', 'Email'], ['recipient', 'Recipient'], ['subject', 'Subject'], ['status', 'Status'], ['error', 'Delivery detail'], ['created_at', 'Queued'], ['sent_at', 'Sent']].map(([key, label]) => ({ key, label })),
+  audit: [['id', 'Record'], ['action', 'Action'], ['actor_type', 'Actor type'], ['actor_id', 'Actor ID'], ['entity_type', 'Record type'], ['entity_id', 'Record ID'], ['created_at', 'Time'], ['details', 'Details']].map(([key, label]) => ({ key, label })),
+}
+const recordStatuses: Partial<Record<Section, string[]>> = { borrowings: ['active', 'overdue', 'returned'], fines: ['unpaid', 'paid', 'waived'], email: ['pending', 'failed', 'sent'] }
 
 export default function AdminApp() {
   const [admin, setAdmin] = useState<Admin | null>(null)
@@ -36,12 +49,18 @@ export default function AdminApp() {
   const [section, setSection] = useState<Section>('dashboard')
   const [online, setOnline] = useState<boolean | null>(null)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
   const [dashboard, setDashboard] = useState<Record<string, unknown>>({})
   const [bookPage, setBookPage] = useState<Page<Book>>({ items: [], total: 0 })
   const [userPage, setUserPage] = useState<Page<User>>({ items: [], total: 0 })
   const [rows, setRows] = useState<Row[]>([])
+  const [rowTotal, setRowTotal] = useState(0)
+  const [recordFilter, setRecordFilter] = useState('')
+  const [pendingCount, setPendingCount] = useState<number | null>(null)
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
+  const confirmationAnswer = useRef<((answer: boolean) => void) | null>(null)
   const [settings, setSettings] = useState<Record<string, string>>({})
   const [search, setSearch] = useState('')
   const [offset, setOffset] = useState(0)
@@ -68,16 +87,25 @@ export default function AdminApp() {
     return () => window.clearInterval(timer)
   }, [token])
 
-  const load = useCallback(async (which: Section, bearer: string, nextOffset = 0, q = '', pending = pendingOnly) => {
+  const load = useCallback(async (which: Section, bearer: string, nextOffset = 0, q = '', pending = pendingOnly, filter = recordFilter) => {
     setBusy(true); setError('')
     try {
-      if (which === 'dashboard') setDashboard(await api<Record<string, unknown>>('/admin/dashboard', {}, bearer))
+      if (which === 'dashboard') {
+        const [summary, pendingUsers] = await Promise.all([api<Record<string, unknown>>('/admin/dashboard', {}, bearer), api<Page<User>>('/users?status=PENDING&limit=1', {}, bearer)])
+        setDashboard(summary); setPendingCount(pendingUsers.total)
+      }
       else if (which === 'books') setBookPage(await api<Page<Book>>(`/books?include_archived=true&q=${encodeURIComponent(q)}&offset=${nextOffset}&limit=20`, {}, bearer))
       else if (which === 'users') setUserPage(await api<Page<User>>(`/users?q=${encodeURIComponent(q)}&offset=${nextOffset}&limit=20${pending ? '&status=PENDING' : ''}`, {}, bearer))
       else if (which === 'settings') setSettings(await api<Record<string, string>>('/settings', {}, bearer))
       else if (listPath[which]) {
-        const response = await api<Page<Row>>(`${listPath[which]}?offset=${nextOffset}&limit=20`, {}, bearer)
-        setRows(response.items)
+        const query = filter ? filter === 'overdue' && which === 'borrowings' ? '&overdue=true' : `&status=${encodeURIComponent(filter)}` : ''
+        let response = await api<Page<Row>>(`${listPath[which]}?offset=${nextOffset}&limit=20${query}`, {}, bearer)
+        if (nextOffset > 0 && !response.items.length && response.total > 0) {
+          const lastOffset = Math.floor((response.total - 1) / 20) * 20
+          response = await api<Page<Row>>(`${listPath[which]}?offset=${lastOffset}&limit=20${query}`, {}, bearer)
+          setOffset(lastOffset)
+        } else if (!response.total) setOffset(0)
+        setRows(response.items); setRowTotal(response.total)
       }
       setOnline(true)
     } catch (cause) {
@@ -85,7 +113,7 @@ export default function AdminApp() {
       setError(message)
       if (message.toLowerCase().includes('session')) { setAdmin(null); setToken('') }
     } finally { setBusy(false) }
-  }, [pendingOnly])
+  }, [pendingOnly, recordFilter])
 
   async function login(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setError('')
@@ -102,7 +130,15 @@ export default function AdminApp() {
     setToken(''); setAdmin(null); setDashboard({}); setRows([]); setError('')
   }
 
-  function navigate(next: Section) { setNotice(''); setSection(next); setNavOpen(false); setOffset(0); setSearch(''); setFormOpen(false); setPendingOnly(false); void load(next, token, 0, '', false) }
+  function navigate(next: Section, filter = '') { setNotice(''); setFieldErrors({}); setRows([]); setRowTotal(0); setSection(next); setNavOpen(false); setOffset(0); setSearch(''); setFormOpen(false); setCopiesBook(null); setPendingOnly(filter === 'pending'); setRecordFilter(filter === 'pending' ? '' : filter); void load(next, token, 0, '', filter === 'pending', filter === 'pending' ? '' : filter) }
+
+  function askConfirmation(request: Confirmation): Promise<boolean> {
+    return new Promise(resolve => { confirmationAnswer.current = resolve; setConfirmation(request) })
+  }
+
+  function answerConfirmation(answer: boolean) {
+    confirmationAnswer.current?.(answer); confirmationAnswer.current = null; setConfirmation(null)
+  }
 
   async function submitBook(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -122,11 +158,11 @@ export default function AdminApp() {
     const action = ((event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null)?.value
     if (action === 'approve') payload.status = 'ACTIVE'
     if (action === 'reject') payload.status = 'INACTIVE'
-    setBusy(true); setError('')
+    setBusy(true); setError(''); setFieldErrors({})
     try {
       await api(`/users${editingUser ? `/${editingUser.id}` : ''}`, { method: editingUser ? 'PUT' : 'POST', body: JSON.stringify(payload) }, token)
       setFormOpen(false); setEditingUser(null); await load('users', token, offset, search)
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not save user.') }
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not save user.'); if (cause instanceof ApiError) setFieldErrors(cause.fields) }
     finally { setBusy(false) }
   }
 
@@ -173,7 +209,7 @@ export default function AdminApp() {
   }
 
   async function emailQr(user: User) {
-    if (!window.confirm(`Email the library ID QR to ${user.email}? Confirm this address belongs to the member.`)) return
+    if (!await askConfirmation({ title: 'Email this member’s library QR?', description: 'Confirm this address belongs to this member. This queues an email and may deliver automatically when the server enables delivery.', details: [['Member', user.name], ['Student ID', user.student_id], ['Recipient', user.email || 'No email address']], action: 'Queue QR email' })) return
     setBusy(true); setError(''); setNotice('')
     try {
       const result = await api<{ message: string }>(`/users/${user.id}/email-qr`, { method: 'POST' }, token)
@@ -185,21 +221,18 @@ export default function AdminApp() {
   async function rowAction(row: Row) {
     const id = Number(row.id)
     if (!Number.isInteger(id)) return
-    if (section === 'fines' && window.confirm('Mark this fine as paid? Confirm payment was received first.')) {
-      await api(`/fines/${id}/pay`, { method: 'POST', body: JSON.stringify({}) }, token)
-    } else if (section === 'reservations' && window.confirm('Cancel this reservation?')) {
-      await api(`/reservations/${id}`, { method: 'DELETE' }, token)
-    } else if (section === 'email') {
-      if (row.status === 'pending') {
-        if (!window.confirm('Send this email to the listed recipient now?')) return
-        const result = await api<{ message: string }>(`/notifications/admin/email-deliveries/${id}/send`, { method: 'POST' }, token)
-        setNotice(result.message)
-      } else {
-        await api(`/notifications/admin/email-deliveries/${id}/retry`, { method: 'POST' }, token)
-        setNotice('Email queued for retry. Use Send now, or wait for enabled automatic delivery.')
-      }
-    } else return
-    await load(section, token, offset)
+    const request: Confirmation | null = section === 'fines' ? { title: 'Mark this fine as paid?', description: 'Confirm you received payment before recording it. This updates the member’s fine balance.', details: [['Fine', `#${id}`], ['Member', String(row.user_name || `User #${row.user_id}`)], ['Book', String(row.book_title || '—')], ['Amount', adminValue(row.amount, 'amount')]], action: 'Confirm payment received' }
+      : section === 'reservations' ? { title: 'Cancel this reservation?', description: 'The member will lose this reservation and its place in the queue.', details: [['Reservation', `#${id}`], ['Member', String(row.user_name || `User #${row.user_id}`)], ['Student ID', String(row.student_id || '—')], ['Book', String(row.book_title || '—')]], action: 'Cancel reservation' }
+      : section === 'email' ? { title: row.status === 'pending' ? 'Send this email now?' : 'Queue this email for retry?', description: row.status === 'pending' ? 'This requests delivery to the address below. Confirm the recipient and subject.' : 'This resets the failed email to pending. Enabled automatic delivery may send it.', details: [['Email record', `#${id}`], ['Recipient', String(row.recipient || '—')], ['Subject', String(row.subject || '—')]], action: row.status === 'pending' ? 'Send email now' : 'Queue retry' } : null
+    if (!request || !await askConfirmation(request)) return
+    setBusy(true); setError(''); setNotice('')
+    try {
+      if (section === 'fines') { await api(`/fines/${id}/pay`, { method: 'POST', body: JSON.stringify({}) }, token); setNotice(`Fine #${id} marked paid.`) }
+      else if (section === 'reservations') { await api(`/reservations/${id}`, { method: 'DELETE' }, token); setNotice(`Reservation #${id} cancelled.`) }
+      else { const result = await api<{ message: string }>(`/notifications/admin/email-deliveries/${id}/${row.status === 'pending' ? 'send' : 'retry'}`, { method: 'POST' }, token); setNotice(result.message) }
+      await load(section, token, offset)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Action failed.') }
+    finally { setBusy(false) }
   }
 
   if (!admin) return <div className="login-page" ref={screenRef}>
@@ -230,11 +263,12 @@ export default function AdminApp() {
       })}</nav>
       <div className="sidebar-bottom"><span><ShieldCheck aria-hidden="true" />Library administration</span><button className="logout" onClick={() => void logout()}><LogOut aria-hidden="true" />Sign out</button></div>
     </aside>
-    <div className="admin-main"><header className="admin-header"><div><span>Workspace</span><ChevronRight aria-hidden="true" /><strong>{sections.find(item => item.id === section)?.label}</strong></div><div><span className={`status ${online ? 'good' : 'bad'}`}>{online ? 'Server connected' : 'Connection problem'}</span><span className="staff-identity"><CircleUserRound aria-hidden="true" />{admin.name}</span></div></header>
+    <div className="admin-main"><header className="admin-header"><div><span>Workspace</span><ChevronRight aria-hidden="true" /><strong>{sections.find(item => item.id === section)?.label}</strong></div><div><span className={`status ${online ? 'good' : 'bad'}`}>{online ? 'Server connected' : 'Connection problem'}</span><AppInfo online={online} /><GuidedHelp admin tasks={formOpen ? [] : sections.filter(item => item.id !== 'settings' || admin.role === 'SUPER_ADMIN')} onTask={id => navigate(id as Section)} screen={section} phase={formOpen ? 'form' : 'list'} /><span className="staff-identity"><CircleUserRound aria-hidden="true" />{admin.name}</span></div></header>
       {busy && <div className="admin-activity" role="status" aria-live="polite"><LoaderCircle className="loading-spinner" aria-hidden="true" />Updating library information...</div>}
-      <main className="admin-content" aria-busy={busy}>{notice && <div className="alert" role="status">{notice}</div>}{error && <div className="alert error" role="alert">{error}</div>}
+      <main data-help-content className="admin-content" aria-busy={busy}>{notice && <div className="alert" role="status">{notice}</div>}{error && <div className="alert error" role="alert">{error}</div>}
         {section === 'dashboard' && <>
           <div className="page-heading"><div><h1>Library dashboard</h1><p>Everything you need to keep the library moving.</p></div><button className="icon-button" disabled={busy} onClick={() => void load(section, token)}><RefreshCw aria-hidden="true" />Refresh</button></div>
+          <section className="admin-attention" aria-labelledby="attention-title"><h2 id="attention-title">Needs attention</h2><p>Open a focused list to review the next action.</p><div className="admin-attention-links"><button disabled={busy} onClick={() => navigate('users', 'pending')}><strong>{pendingCount ?? '—'}</strong><span>Pending registrations<small>Review member details and approve access</small></span><ChevronRight aria-hidden="true" /></button><button disabled={busy} onClick={() => navigate('borrowings', 'overdue')}><strong>{String(dashboard.overdue_borrowings ?? '—')}</strong><span>Overdue loans<small>Review loans past their due date</small></span><ChevronRight aria-hidden="true" /></button><button disabled={busy} onClick={() => navigate('email', 'failed')}><strong>{String(dashboard.failed_email_deliveries ?? '—')}</strong><span>Failed emails<small>Check delivery details before retrying</small></span><ChevronRight aria-hidden="true" /></button></div></section>
           <div className="metric-grid">{metrics.map(({label, key, Icon}) => <div className={`metric metric-${key}`} key={key}><span className="metric-icon"><Icon aria-hidden="true" /></span><strong>{String(dashboard[key] ?? '—')}</strong><span>{label}</span></div>)}</div>
           <div className="dashboard-workspace">
             <section className="panel workspace-panel"><div className="workspace-panel-heading"><span className="panel-icon"><ArrowUpRight aria-hidden="true" /></span><div><h2>Circulation today</h2><p>Current activity from your library.</p></div></div>
@@ -246,9 +280,28 @@ export default function AdminApp() {
             </section>
           </div>
         </>}
-    {(section === 'books' || section === 'users') && <><div className="page-heading"><div><p className="eyebrow">Management</p><h1>{section === 'books' ? 'Catalog' : 'Library users'}</h1><p>{section === 'books' ? bookPage.total : userPage.total} records</p></div><button className="primary icon-button" onClick={() => { setEditingBook(null); setEditingUser(null); setFormOpen(true) }}><Plus aria-hidden="true" />Add {section === 'books' ? 'book' : 'user'}</button></div><form className="search-form" onSubmit={event => { event.preventDefault(); setOffset(0); void load(section, token, 0, search) }}><input aria-label="Search records" placeholder="Search records" value={search} onChange={event => setSearch(event.target.value)} /><button>Search</button></form>{formOpen && section === 'books' && <form className="panel form-grid" onSubmit={event => void submitBook(event)}><h2>{editingBook ? 'Edit book' : 'Add book'}</h2>{[['isbn', 'ISBN'], ['title', 'Title'], ['author', 'Author'], ['category', 'Category'], ['shelf_location', 'Shelf location'], ['publisher', 'Publisher']].map(([name, label]) => <label key={name}>{label}<input name={name} defaultValue={String(editingBook?.[name as keyof Book] || '')} required={['isbn', 'title', 'author', 'category', 'shelf_location'].includes(name)} /></label>)}{!editingBook && <label>Initial copies<input name="initial_copy_count" type="number" min="0" max="100" defaultValue="1" /></label>}<div className="inline"><button className="primary" disabled={busy}>Save book</button><button type="button" onClick={() => setFormOpen(false)}>Cancel</button></div></form>}{formOpen && section === 'users' && <MemberForm key={editingUser?.id || 'new-user'} user={editingUser} busy={busy} onSubmit={event => void submitUser(event)} onCancel={() => setFormOpen(false)} />}{section === 'users' && <div className="registration-filters"><button disabled={busy} aria-pressed={!pendingOnly} onClick={() => { setPendingOnly(false); setOffset(0); void load('users', token, 0, search, false) }}>All users</button><button disabled={busy} aria-pressed={pendingOnly} onClick={() => { setPendingOnly(true); setOffset(0); void load('users', token, 0, search, true) }}>Pending registrations</button></div>}{section === 'books' && copiesBook && <div className="panel"><div className="page-heading"><h2>Copies: {copiesBook.title}</h2><button onClick={() => setCopiesBook(null)}>Close</button></div><div className="inline"><button onClick={() => void addCopies(1)} disabled={busy}>Add copy</button><button onClick={() => void downloadSheet()} disabled={!copies.length}>Download QR sheet</button></div><div className="list">{copies.map(copy => <div key={copy.id}><span><strong>{copy.accession_number}</strong> ? {copy.status}</span><button onClick={() => void downloadQr(`/book-copies/${copy.id}/qr`)}>Download QR</button></div>)}</div></div>}<div className="table-wrap"><table><thead><tr>{section === 'books' ? <><th>Title</th><th>Author</th><th>ISBN</th><th>Available</th><th></th></> : <><th>Name</th><th>Student ID</th><th>Course</th><th>Status</th><th></th></>}</tr></thead><tbody>{section === 'books' ? bookPage.items.map(book => <tr key={book.id}><td>{book.title}</td><td>{book.author}</td><td>{book.isbn}</td><td>{book.available_copies ?? 0}</td><td><button onClick={() => { setEditingBook(book); setFormOpen(true) }}>Edit</button> <button onClick={() => void openCopies(book)}>Copies & QR</button></td></tr>) : userPage.items.map(user => <tr key={user.id}><td>{user.name}</td><td>{user.student_id}{user.library_card_number && <small className="library-card-label">Library: {user.library_card_number}</small>}</td><td>{user.course}</td><td>{user.account_status}</td><td><button onClick={() => { setEditingUser(user); setFormOpen(true) }}>{user.account_status === 'pending' ? 'Review request' : 'Edit'}</button> {user.account_status !== 'pending' && <button onClick={() => void downloadQr(`/users/${user.id}/qr`)}>QR</button>} {user.account_status === 'active' && user.email && <button disabled={busy} onClick={() => void emailQr(user)}>Email QR</button>}</td></tr>)}</tbody></table></div><div className="pagination"><button disabled={busy || offset === 0} onClick={() => { const next = Math.max(0, offset - 20); setOffset(next); void load(section, token, next, search) }}>Previous</button><span>{offset + 1}–{Math.min(offset + 20, section === 'books' ? bookPage.total : userPage.total)}</span><button disabled={busy || offset + 20 >= (section === 'books' ? bookPage.total : userPage.total)} onClick={() => { const next = offset + 20; setOffset(next); void load(section, token, next, search) }}>Next</button></div></>}
-    {listPath[section] && <>{section === 'email' && <p className="alert">Pending emails can be sent individually with Send now. Automatic delivery must be enabled by the server operator. Sent means the provider accepted the email; check the inbox or spam folder.</p>}<div className="page-heading"><div><p className="eyebrow">Records</p><h1>{sections.find(item => item.id === section)?.label}</h1></div><button disabled={busy} onClick={() => void load(section, token, offset)}>Refresh</button></div><div className="table-wrap"><table><thead><tr>{Object.keys(rows[0] || {}).slice(0, 7).map(key => <th key={key}>{key.replaceAll('_', ' ')}</th>)}{['fines', 'reservations', 'email'].includes(section) && <th>Action</th>}</tr></thead><tbody>{rows.map((row, index) => <tr key={index}>{Object.values(row).slice(0, 7).map((value, column) => <td key={column}>{typeof value === 'object' ? JSON.stringify(value) : String(value ?? '—')}</td>)}{['fines', 'reservations', 'email'].includes(section) && <td><button disabled={busy || (section === 'email' ? !['pending', 'failed'].includes(String(row.status)) : section === 'fines' ? row.status !== 'unpaid' : !['active', 'ready'].includes(String(row.status)))} onClick={() => void rowAction(row).catch(cause => setError(cause instanceof Error ? cause.message : 'Action failed.'))}>{section === 'email' ? (row.status === 'pending' ? 'Send now' : 'Retry') : section === 'fines' ? 'Mark paid' : 'Cancel'}</button></td>}</tr>)}</tbody></table>{!rows.length && <div className="empty">No records found.</div>}</div><div className="pagination"><button disabled={busy || offset === 0} onClick={() => { const next = Math.max(0, offset - 20); setOffset(next); void load(section, token, next) }}>Previous</button><span>Page {Math.floor(offset / 20) + 1}</span><button disabled={busy || rows.length < 20} onClick={() => { const next = offset + 20; setOffset(next); void load(section, token, next) }}>Next</button></div></>}
+    {(section === 'books' || section === 'users') && <>
+      <div className="page-heading"><div><p className="eyebrow">Management</p><h1>{section === 'books' ? 'Catalog' : 'Library users'}</h1><p>{section === 'books' ? bookPage.total : userPage.total} records</p></div><button className="primary icon-button" disabled={busy} onClick={() => { setEditingBook(null); setEditingUser(null); setFieldErrors({}); setFormOpen(true) }}><Plus aria-hidden="true" />Add {section === 'books' ? 'book' : 'user'}</button></div>
+      <form className="search-form" onSubmit={event => { event.preventDefault(); setOffset(0); void load(section, token, 0, search) }}><input aria-label="Search records" placeholder="Search all records" value={search} onChange={event => setSearch(event.target.value)} /><button disabled={busy}>Search</button></form>
+      {formOpen && section === 'books' && <form className="panel form-grid" onSubmit={event => void submitBook(event)}><h2>{editingBook ? 'Edit book' : 'Add book'}</h2>{[['isbn', 'ISBN'], ['title', 'Title'], ['author', 'Author'], ['category', 'Category'], ['shelf_location', 'Shelf location'], ['publisher', 'Publisher']].map(([name, label]) => <label key={name}>{label}<input name={name} defaultValue={String(editingBook?.[name as keyof Book] || '')} required={['isbn', 'title', 'author', 'category', 'shelf_location'].includes(name)} /></label>)}{!editingBook && <label>Initial copies<input name="initial_copy_count" type="number" min="0" max="100" defaultValue="1" /></label>}<div className="inline"><button className="primary" disabled={busy}>Save book</button><button type="button" onClick={() => setFormOpen(false)}>Cancel</button></div></form>}
+      {formOpen && section === 'users' && <MemberForm key={editingUser?.id || 'new-user'} user={editingUser} fieldErrors={fieldErrors} busy={busy} onSubmit={event => void submitUser(event)} onCancel={() => setFormOpen(false)} />}
+      {section === 'users' && <div className="registration-filters"><button disabled={busy} aria-pressed={!pendingOnly} onClick={() => { setPendingOnly(false); setOffset(0); void load('users', token, 0, search, false) }}>All users</button><button disabled={busy} aria-pressed={pendingOnly} onClick={() => { setPendingOnly(true); setOffset(0); void load('users', token, 0, search, true) }}>Pending registrations</button></div>}
+      {section === 'books' && copiesBook && <div className="panel"><div className="page-heading"><h2>Copies: {copiesBook.title}</h2><button onClick={() => setCopiesBook(null)}>Close</button></div><div className="inline"><button onClick={() => void addCopies(1)} disabled={busy}>Add copy</button><button onClick={() => void downloadSheet()} disabled={!copies.length}>Download QR sheet</button></div><div className="list">{copies.map(copy => <div key={copy.id}><span><strong>{copy.accession_number}</strong> · {copy.status}</span><button onClick={() => void downloadQr(`/book-copies/${copy.id}/qr`)}>Download QR</button></div>)}</div></div>}
+      <AdminTable key={section} rows={section === 'books' ? bookPage.items : userPage.items} columns={section === 'books' ? [{ key: 'title', label: 'Title' }, { key: 'author', label: 'Author' }, { key: 'isbn', label: 'ISBN' }, { key: 'available_copies', label: 'Available' }] : [{ key: 'name', label: 'Name' }, { key: 'student_id', label: 'Student ID', render: row => <>{String(row.student_id)}{Boolean(row.library_card_number) && <small className="library-card-label">Library: {String(row.library_card_number)}</small>}</> }, { key: 'course', label: 'Course' }, { key: 'account_status', label: 'Status' }]} actions={row => {
+        if (section === 'books') { const book = row as Book; return <><button disabled={busy} aria-label={`Edit ${book.title}`} onClick={() => { setEditingBook(book); setFormOpen(true) }}>Edit</button><button disabled={busy} aria-label={`Copies and QR for ${book.title}`} onClick={() => void openCopies(book)}>Copies & QR</button></> }
+        const user = row as User
+        return <><button disabled={busy} aria-label={`${user.account_status === 'pending' ? 'Review request' : 'Edit'} for ${user.name}`} onClick={() => { setEditingUser(user); setFieldErrors({}); setFormOpen(true) }}>{user.account_status === 'pending' ? 'Review request' : 'Edit'}</button>{user.account_status !== 'pending' && <button disabled={busy} aria-label={`QR for ${user.name}`} onClick={() => void downloadQr(`/users/${user.id}/qr`)}>QR</button>}{user.account_status === 'active' && user.email && <button disabled={busy} aria-label={`Email QR to ${user.name}`} onClick={() => void emailQr(user)}>Email QR</button>}</>
+      }} />
+      <AdminPagination offset={offset} total={section === 'books' ? bookPage.total : userPage.total} busy={busy} onPage={next => { setOffset(next); void load(section, token, next, search) }} />
+    </>}
+    {listPath[section] && <>
+      {section === 'email' && <p className="alert">Pending emails can be sent individually with Send now. Automatic delivery must be enabled by the server operator. Sent means the provider accepted the email; check the inbox or spam folder.</p>}
+      <div className="page-heading"><div><p className="eyebrow">Records</p><h1>{sections.find(item => item.id === section)?.label}</h1><p>{rowTotal} records{recordFilter ? ` · ${recordFilter}` : ''}</p></div><button disabled={busy} onClick={() => void load(section, token, offset)}>Refresh</button></div>
+      {recordStatuses[section] && <label className="admin-record-filter">Status across all records<select aria-label="Filter records by status" disabled={busy} value={recordFilter} onChange={event => { const filter = event.target.value; setRecordFilter(filter); setOffset(0); void load(section, token, 0, '', false, filter) }}><option value="">All statuses</option>{recordStatuses[section]?.map(status => <option key={status} value={status}>{status === 'overdue' ? 'Overdue by due date' : status.charAt(0).toUpperCase() + status.slice(1)}</option>)}</select></label>}
+      <AdminTable key={`${section}-${recordFilter}`} rows={rows} columns={recordColumns[section] || []} searchable actions={['fines', 'reservations', 'email'].includes(section) ? row => <button disabled={busy || (section === 'email' ? !['pending', 'failed'].includes(String(row.status)) : section === 'fines' ? row.status !== 'unpaid' : !['active', 'ready'].includes(String(row.status)))} aria-label={`${section === 'email' ? row.status === 'pending' ? 'Send now' : 'Retry' : section === 'fines' ? 'Mark paid' : 'Cancel'} ${section === 'email' ? `email #${row.id} to ${row.recipient}` : `record #${row.id}`}`} onClick={() => void rowAction(row)}>{section === 'email' ? row.status === 'pending' ? 'Send now' : row.status === 'failed' ? 'Retry' : 'Sent' : section === 'fines' ? row.status === 'unpaid' ? 'Mark paid' : String(row.status) : ['active', 'ready'].includes(String(row.status)) ? 'Cancel' : String(row.status)}</button> : undefined} />
+      <AdminPagination offset={offset} total={rowTotal} busy={busy} onPage={next => { setOffset(next); void load(section, token, next) }} />
+    </>}
     {section === 'settings' && <><div className="page-heading"><div><p className="eyebrow">Super admin</p><h1>Library policies</h1></div></div><div className="settings-list">{Object.entries(settings).map(([key, value]) => <form className="panel" key={key} onSubmit={event => { event.preventDefault(); const field = event.currentTarget.elements.namedItem('value') as HTMLInputElement; void saveSetting(key, field.value) }}><label>{key.replaceAll('_', ' ').toLowerCase()}<input name="value" defaultValue={value} /></label><button disabled={busy}>Save</button></form>)}</div></>}
     {section === 'reports' && <ReportsPanel token={token} />}
-  </main></div></div>
+  </main></div><AdminConfirmation request={confirmation} onAnswer={answerConfirmation} /></div>
 }

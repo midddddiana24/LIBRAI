@@ -1,3 +1,4 @@
+import KioskLanguageProvider from './KioskLanguageProvider'
 import { lazy, Suspense } from 'react'
 import StartupScreen from './StartupScreen'
 
@@ -7,6 +8,6 @@ const AdminApp = lazy(() => import('./AdminApp'))
 export default function App() {
   const adminRoute = window.location.pathname.startsWith('/admin')
   return <Suspense fallback={<StartupScreen mode={adminRoute ? 'admin' : 'kiosk'} />}>
-    {adminRoute ? <AdminApp /> : <KioskApp />}
+    {adminRoute ? <AdminApp /> : <KioskLanguageProvider><KioskApp /></KioskLanguageProvider>}
   </Suspense>
 }

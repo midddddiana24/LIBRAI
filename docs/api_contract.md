@@ -172,3 +172,7 @@ See [AI assistant behavior and verification](ai_assistant.md) for matching limit
 `POST /api/v1/ai/search` accepts optional `history` with at most eight `{role: "user" | "assistant", content: string}` messages, each 1–2,500 characters. Only the current `query` (2–1,000 characters), bounded history and catalog context go to the conversation provider. History cannot grant authority. Supplying a `user_id` always requires a valid matching `user_verification_token`.
 
 `response_type` distinguishes `conversation`, `clarify`, `catalog`, `policy`, and `account`. `language` is `en`, `fil` or `mixed` on new routed replies. Verified account replies may include `account.loans` (title, ISO due date, renewal eligibility/note) and `account.unpaid_fine_cents`. Client history excludes account replies. Policy values, library books and account records are server-derived; model plans cannot execute writes. Provider outage remains a normal reply with `fallback_used=true` for study questions, while local library lookups continue.
+
+### UX 1.9.0
+
+`GET /borrowings` adds optional `overdue=true` for active loans past their actual due date, even when their stored status is still ACTIVE. Existing authorization remains mandatory. Borrowing projections add nullable `renewal_unavailable_reason`; `can_renew` also checks waiting reservations by other members. See [UX release and verification](release_1.9.0.md).

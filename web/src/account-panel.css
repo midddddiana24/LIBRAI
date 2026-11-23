@@ -1,0 +1,14 @@
+﻿.account-sections.account-workspace { grid-template-columns: minmax(0, 1fr); gap: var(--space-md, 16px); }
+.account-identity { display: flex; justify-content: space-between; align-items: center; gap: var(--space-md, 16px); }
+.account-identity h2 { margin-top: 0; }
+.account-identity p { margin-bottom: 0; }
+.account-tabs { display: flex; gap: var(--space-xs, 8px); overflow-x: auto; padding: 4px; }
+.account-tabs button { flex: 0 0 auto; min-height: 48px; }
+.account-tabs [aria-selected="true"] { color: var(--color-paper, white); background: var(--color-accent, #126e63); border-color: var(--color-accent, #126e63); }
+.account-tab-panel { min-width: 0; }
+.account-tab-panel .list > div { gap: var(--space-md, 16px); }
+.account-tab-panel .list strong, .account-tab-panel .list span { overflow-wrap: anywhere; min-width: 0; }
+.account-workspace .account-renewal-reason { color: var(--color-text, #153b43); margin-top: var(--space-sm, 8px); }
+.account-total { color: var(--color-muted, #5e7779); }
+.account-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-sm, 8px); margin-top: var(--space-lg, 24px); }
+@media (max-width: 650px) { .account-identity { align-items: flex-start; flex-direction: column; } .account-tab-panel .list > div { align-items: flex-start; flex-direction: column; } }

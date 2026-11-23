@@ -3,7 +3,8 @@ const API_ORIGIN = new URL(API_BASE).origin
 
 export class ApiError extends Error {
   status: number
-  constructor(message: string, status: number) { super(message); this.status = status }
+  fields: Record<string,string>
+  constructor(message: string, status: number, fields: Record<string,string> = {}) { super(message); this.status = status; this.fields = fields }
 }
 
 function messageFrom(body: unknown, status: number): string {
@@ -35,7 +36,13 @@ export async function api<T>(path: string, options: RequestInit = {}, token?: st
       cache: 'no-store',
     })
     const body: unknown = await response.json().catch(() => null)
-    if (!response.ok) throw new ApiError(messageFrom(body, response.status), response.status)
+    if (!response.ok) {
+      const fields: Record<string,string> = {}
+      if (response.status === 422 && body && typeof body === 'object' && 'detail' in body && Array.isArray(body.detail)) {
+        for (const item of body.detail) if (item && Array.isArray(item.loc) && typeof item.msg === 'string') fields[String(item.loc.at(-1))] = item.msg
+      }
+      throw new ApiError(messageFrom(body, response.status), response.status, fields)
+    }
     return body as T
   } catch (error) {
     if (error instanceof ApiError) throw error

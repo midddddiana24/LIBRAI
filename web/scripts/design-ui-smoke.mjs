@@ -83,6 +83,11 @@ try {
       }
     }
     await signIn()
+    await page.getByRole('button', { name: 'Help', exact: true }).click()
+    await page.getByRole('button', { name: 'Guide this screen', exact: true }).click()
+    await page.getByText('Review current library totals. Choose a section to manage its records.', { exact: true }).waitFor()
+    await page.keyboard.press('Escape')
+    assert.equal(await page.getByRole('dialog').count(), 0)
     await fits(page, width, height)
     if (width === 1440 || width === 375) await snapshot(page, `modern-admin-${width}`)
     await openNavigation()

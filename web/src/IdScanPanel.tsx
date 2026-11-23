@@ -1,3 +1,4 @@
+import { useKioskLanguage } from './kioskLanguage'
 import { useEffect, useRef, useState } from 'react'
 import { Camera, LoaderCircle, ScanText, Upload } from 'lucide-react'
 import type { Worker } from 'tesseract.js'
@@ -7,6 +8,7 @@ import { recoverCampusText } from './idCardRecovery'
 const labels: Record<keyof IdDraft, string> = { student_id: 'Campus student ID', library_card_number: 'Library card number', first_name: 'First name / middle initial', last_name: 'Last name / suffix', course: 'Course' }
 
 export default function IdScanPanel({ onApply, disabled }: { onApply: (draft: IdDraft) => void; disabled: boolean }) {
+  const {t}=useKioskLanguage()
   const [kind, setKind] = useState<CardKind>('campus')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -81,8 +83,8 @@ export default function IdScanPanel({ onApply, disabled }: { onApply: (draft: Id
   }
 
   return <section className="id-scan-panel" aria-label="Scan ID details">
-    <div className="id-scan-heading"><ScanText aria-hidden="true" /><div><h3>Read details from your ID</h3><p>Photograph the front, keep all text visible, and avoid glare. Photos are processed on this device.</p></div></div>
-    <label>Card to read<select aria-label="Card to read" value={kind} disabled={busy || disabled} onChange={e => { clear(); setKind(e.target.value as CardKind) }}><option value="campus">Campus ID front</option><option value="library">Library borrower's card front</option></select></label>
+    <div className="id-scan-heading"><ScanText aria-hidden="true" /><div><h3>{t('Read details from your ID','Basahin ang details sa ID')}</h3><p>{t('Photograph the front, keep all text visible, and avoid glare. Photos are processed on this device.','Kunan ang harap ng ID. Ipakita ang text at iwasan ang glare. Sa device na ito pinoproseso ang photo.')}</p></div></div>
+    <label>{t('Card to read','Uri ng card')}<select aria-label="Card to read" value={kind} disabled={busy || disabled} onChange={e => { clear(); setKind(e.target.value as CardKind) }}><option value="campus">{t('Campus ID front','Harap ng campus ID')}</option><option value="library">{t("Library borrower's card front",'Harap ng library card')}</option></select></label>
     <div className="id-scan-actions">
       <button type="button" className="icon-button" onClick={() => camera.current?.click()} disabled={busy || disabled}><Camera aria-hidden="true" />Take photo</button>
       <button type="button" className="icon-button" onClick={() => upload.current?.click()} disabled={busy || disabled}><Upload aria-hidden="true" />Choose image</button>
@@ -92,7 +94,7 @@ export default function IdScanPanel({ onApply, disabled }: { onApply: (draft: Id
     <input hidden ref={upload} aria-label="Choose ID image" type="file" accept="image/jpeg,image/png,image/webp" disabled={busy || disabled} onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void read(f) }} />
     {message && <p role="status" className="id-scan-status">{busy && <LoaderCircle className="loading-spinner" aria-hidden="true" />}{message}</p>}
     {preview && <img className="id-photo-preview" src={preview} alt="Selected ID photo for local review" />}
-    {draft && Object.keys(draft).length > 0 && <div className="id-scan-results"><dl>{Object.entries(draft).map(([key, value]) => <div key={key}><dt>{labels[key as keyof IdDraft]}</dt><dd>{value}</dd></div>)}</dl><button type="button" onClick={() => { onApply(draft); clear() }}>Apply scanned details</button><p>Applying replaces these fields in the form. Check and correct them before submitting.</p></div>}
+    {draft && Object.keys(draft).length > 0 && <div className="id-scan-results"><dl>{Object.entries(draft).map(([key, value]) => <div key={key}><dt>{labels[key as keyof IdDraft]}</dt><dd>{value}</dd></div>)}</dl><button type="button" onClick={() => { onApply(draft); clear() }}>{t('Apply scanned details','Ilapat ang nabasang details')}</button><p>Applying replaces these fields in the form. Check and correct them before submitting.</p></div>}
     <p className="id-scan-privacy">Only the form fields you submit are sent to LIBRAI. ID photos, signatures, birthday, address, and emergency contacts are not saved by this scan.</p>
   </section>
 }

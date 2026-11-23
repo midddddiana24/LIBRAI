@@ -19,7 +19,7 @@ try{
   if(width>=600)assert.ok(await p.evaluate(()=>document.documentElement.scrollHeight<=innerHeight+1),'Translated tablet home fits vertically')
   await p.getByLabel('Interface language',{exact:true}).selectOption('en')
   await p.getByRole('button',{name:'About LIBRAI',exact:true}).click()
-  await p.getByRole('heading',{name:'LIBRAI 1.9.0'}).waitFor()
+  await p.getByRole('heading',{name:'LIBRAI 1.9.1'}).waitFor()
   await p.getByRole('button',{name:'Close',exact:true}).click()
   await p.getByLabel('Library options',{exact:true}).press('Escape')
   assert.equal(await p.locator('.utility-menu').evaluate(el=>el.open),false)

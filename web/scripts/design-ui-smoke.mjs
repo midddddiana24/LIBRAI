@@ -83,6 +83,7 @@ try {
       }
     }
     await signIn()
+    if (!await page.locator('.utility-menu').evaluate(el => el.open)) await page.getByLabel('Library options', { exact: true }).click()
     await page.getByRole('button', { name: 'Help', exact: true }).click()
     await page.getByRole('button', { name: 'Guide this screen', exact: true }).click()
     await page.getByText('Review current library totals. Choose a section to manage its records.', { exact: true }).waitFor()

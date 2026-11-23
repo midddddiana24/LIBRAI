@@ -1,3 +1,4 @@
+import UtilityMenu from './UtilityMenu'
 import GuidedHelp from './GuidedHelp'
 import AppInfo from './AppInfo'
 import { AdminConfirmation, AdminPagination, AdminTable, StatusBadge, type Confirmation, type AdminColumn } from './AdminUx'
@@ -263,7 +264,7 @@ export default function AdminApp() {
       })}</nav>
       <div className="sidebar-bottom"><span><ShieldCheck aria-hidden="true" />Library administration</span><button className="logout" onClick={() => void logout()}><LogOut aria-hidden="true" />Sign out</button></div>
     </aside>
-    <div className="admin-main"><header className="admin-header"><div><span>Workspace</span><ChevronRight aria-hidden="true" /><strong>{sections.find(item => item.id === section)?.label}</strong></div><div><span className={`status ${online ? 'good' : 'bad'}`}>{online ? 'Server connected' : 'Connection problem'}</span><AppInfo online={online} /><GuidedHelp admin tasks={formOpen ? [] : sections.filter(item => item.id !== 'settings' || admin.role === 'SUPER_ADMIN')} onTask={id => navigate(id as Section)} screen={section} phase={formOpen ? 'form' : 'list'} /><span className="staff-identity"><CircleUserRound aria-hidden="true" />{admin.name}</span></div></header>
+    <div className="admin-main"><header className="admin-header"><div><span>Workspace</span><ChevronRight aria-hidden="true" /><strong>{sections.find(item => item.id === section)?.label}</strong></div><div><span className={`status ${online ? 'good' : 'bad'}`}>{online ? 'Server connected' : 'Connection problem'}</span><UtilityMenu><AppInfo online={online} /><GuidedHelp admin tasks={formOpen ? [] : sections.filter(item => item.id !== 'settings' || admin.role === 'SUPER_ADMIN')} onTask={id => navigate(id as Section)} screen={section} phase={formOpen ? 'form' : 'list'} /></UtilityMenu><span className="staff-identity"><CircleUserRound aria-hidden="true" />{admin.name}</span></div></header>
       {busy && <div className="admin-activity" role="status" aria-live="polite"><LoaderCircle className="loading-spinner" aria-hidden="true" />Updating library information...</div>}
       <main data-help-content className="admin-content" aria-busy={busy}>{notice && <div className="alert" role="status">{notice}</div>}{error && <div className="alert error" role="alert">{error}</div>}
         {section === 'dashboard' && <>

@@ -44,3 +44,11 @@ Real tablet keyboard, camera, microphone, speaker and animation acceptance remai
 Gradle reported `BUILD SUCCESSFUL in 26s`. Signature verification passed and matches the previous debug signer. Package inspection confirms 1.9.0/code 13, with debugging enabled for this internal build. Packaged HTML/JavaScript/CSS match the final web build byte for byte; Gmail credential filenames are absent.
 
 File size: 49,594,306 bytes. SHA-256: `39a36c4c92caf7ecab0a85b8a89f985c2e76c8f4c43db75b5ecf9f2c4edba86d`.
+
+## Preserve live appearance - 2026-11-23
+
+The live blue-and-white home was captured at 768x1024 before editing. Its four illustrated tiles, typography, original footer and dimensions are retained. Help, interface language and About now share an Options disclosure in the kiosk header; admin Help/About share the same compact control. Existing theme files were retained. No database migration is added.
+
+Checks: production build/lint; shared UX at four sizes; admin mocked browser; guided Help at four sizes; borrowing at five sizes; layout/navigation at eight sizes; two isolated backend overdue/renewal tests passed. No real account, circulation or email writes were performed. Physical tablet checks remain manual.
+
+Deploy the resulting commit from online-admin-postgres to BOTH existing Render services (API first, kiosk second). The main branch remains on an older implementation. Render services pinned to a commit or with automatic deployment disabled require a manual deployment of the new commit. Do not replace production database or environment values. Publishing a Git commit alone does not establish live deployment.

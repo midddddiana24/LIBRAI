@@ -31,6 +31,30 @@ try {
     console.log(`PASS startup ${width}x${height}: book asset, connection, ready, home, overflow`)
     await page.close()
   }
+  for (const failure of ['delayed', 'missing']) {
+    const p = await browser.newPage({ viewport: { width: 768, height: 1024 } })
+    await p.route('**/health', route => route.fulfill({ json: { status: 'healthy' } }))
+    let releaseImage
+    await p.route('**/librai-startup-book.png', async route => {
+      if (failure === 'missing') return route.abort()
+      await new Promise(resolve => { releaseImage = resolve })
+      await route.continue()
+    })
+    await p.goto(base, { waitUntil: 'domcontentloaded' })
+    if (failure === 'delayed') {
+      await p.locator('.startup-art-loading .startup-book-fallback').waitFor()
+      assert.equal(await p.getByRole('button', { name: 'Borrow a book', exact: true }).count(), 0)
+      assert.ok(releaseImage)
+      releaseImage()
+    }
+    const art = p.locator(failure === 'missing' ? '.startup-art-fallback' : '.startup-art-ready')
+    await art.waitFor()
+    const start = Date.now()
+    await p.getByRole('button', { name: 'Borrow a book', exact: true }).waitFor()
+    assert.ok(Date.now() - start >= 1000, 'Book must finish opening after artwork resolves')
+    console.log('PASS startup ' + failure + ' image: visible fallback and complete opening before Home')
+    await p.close()
+  }
   const page = await browser.newPage({ viewport: { width: 768, height: 1024 }, reducedMotion: 'reduce' })
   let attempt = 0
   await page.route('**/health', route => route.fulfill({ status: ++attempt === 1 ? 503 : 200, json: { status: attempt === 1 ? 'unavailable' : 'healthy' } }))

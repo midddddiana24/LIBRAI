@@ -100,7 +100,8 @@ def test_missing_credentials_leave_pending_and_reject_dispatch(client, auth_head
     with db_factory() as db: assert db.get(EmailDelivery, uid).status == 'PENDING'
 
 
-def test_poll_dispatches_committed_work_and_stops_without_sleep(db_factory, gmail):
+def test_poll_dispatches_committed_work_and_stops_without_sleep(db_factory, gmail, monkeypatch):
+    monkeypatch.setattr(settings, 'email_autosend_enabled', True)
     with db_factory() as db:
         queue_library_id(db, db.get(User, 1)); db.commit()
     class Stop:

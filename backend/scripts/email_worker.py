@@ -14,8 +14,9 @@ import qrcode
 from sqlalchemy import select
 from backend.core.config import settings
 from backend.core.database import SessionLocal
-from backend.models.entities import EmailDelivery, EmailDeliveryStatus, Notification, User
+from backend.models.entities import Borrowing, EmailDelivery, EmailDeliveryStatus, Notification, User
 from backend.services import gmail_service
+from backend.services.notification_service import is_overdue, overdue_message
 
 
 def configured() -> bool:
@@ -44,6 +45,11 @@ def build_message(db, item: EmailDelivery) -> EmailMessage:
     if not user or not user.email or user.email.casefold() != item.recipient.casefold():
         raise ValueError("Recipient no longer matches the member account. Queue a new email after correcting the address.")
     notification = db.get(Notification, item.notification_id) if item.notification_id else None
+    if notification and notification.type == "OVERDUE_REMINDER":
+        loan = db.scalar(select(Borrowing).where(Borrowing.id == notification.borrowing_id).with_for_update())
+        if not loan or not is_overdue(loan):
+            raise ValueError("Overdue reminder withheld: the loan was returned or is no longer overdue.")
+        message.set_content(overdue_message(loan))
     if notification and notification.type == "LIBRARY_ID":
         if user.status != "ACTIVE":
             raise ValueError("Library ID withheld: the account is not active.")

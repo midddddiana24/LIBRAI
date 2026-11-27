@@ -3,6 +3,9 @@ import logging
 from threading import Event
 
 from backend.scripts.email_worker import configured, process
+from backend.core.config import settings
+from backend.core.database import SessionLocal
+from backend.services.notification_service import queue_overdue_reminders
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +20,16 @@ def deliver_one(delivery_id: int):
 def poll(stop: Event):
     while not stop.is_set():
         try:
-            if configured():
+            if settings.overdue_notifications_enabled:
+                with SessionLocal() as db:
+                    queued = queue_overdue_reminders(db)
+                    db.commit()
+                    if queued:
+                        logger.info("Queued %s overdue reminder(s).", queued)
+        except Exception as exc:
+            logger.warning("Overdue reminder check paused (%s); next cycle will retry.", type(exc).__name__)
+        try:
+            if settings.email_autosend_enabled and configured():
                 process(limit=5)
         except Exception as exc:
             logger.warning("Email polling paused (%s); pending work remains in the database.", type(exc).__name__)

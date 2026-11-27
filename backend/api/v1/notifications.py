@@ -13,7 +13,7 @@ router=APIRouter(prefix="/notifications",tags=["Notifications"])
 @router.get("/admin/email-status")
 def email_status(admin:Admin=Depends(get_optional_admin)):
     if not admin:raise HTTPException(401,"Admin authentication required.")
-    return {"smtp_configured":all((settings.smtp_host,settings.smtp_username,settings.smtp_password,settings.smtp_from)),"transport":settings.email_transport,"email_configured":bool(configured()),"autosend_enabled":settings.email_autosend_enabled,"delivery_mode":"API polling while awake if enabled, or separate worker. Configuration is not a delivery test."}
+    return {"smtp_configured":all((settings.smtp_host,settings.smtp_username,settings.smtp_password,settings.smtp_from)),"transport":settings.email_transport,"email_configured":bool(configured()),"autosend_enabled":settings.email_autosend_enabled,"overdue_notifications_enabled":settings.overdue_notifications_enabled,"delivery_mode":"API polling while awake if enabled, or separate worker. Configuration is not a delivery test."}
 
 @router.post("/admin/email-deliveries/{delivery_id}/send",status_code=202)
 def send_email(delivery_id:int,tasks:BackgroundTasks,admin:Admin=Depends(get_optional_admin),db:Session=Depends(get_db)):

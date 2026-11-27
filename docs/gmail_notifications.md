@@ -158,6 +158,7 @@ Polling runs inside the API process and pauses when Render sleeps or restarts. P
 | Borrow | Borrow confirmation and due date |
 | Return | Return confirmation |
 | Renewal | Updated due date |
+| Overdue loan | One reminder after the due time passes; also visible in My account notifications |
 | Reservation | Queue confirmation or ready-for-pickup notice |
 | Fine assessed / paid | Fine notification or payment confirmation |
 
@@ -172,3 +173,13 @@ Follow [the separate SMTP setup guide](gmail_smtp_setup.md), using its **Local a
 ## What to do now
 
 **If your OAuth client is ready, continue at Step 6. If Google blocks testing access, add the sender under Audience > Test users first.**
+
+## Automatic overdue reminders
+
+After the API migration is deployed, OVERDUE_NOTIFICATIONS_ENABLED defaults to true. While the API is awake it checks every 30 seconds, in batches of up to 100, for ACTIVE or OVERDUE loans whose due_at has passed and that have not received a reminder. It creates one in-app notice per loan and queues one email if the member has an email address. Dates are displayed in Philippine time (UTC+08:00). No daily repeat or new fine is created by this feature.
+
+Email sending remains controlled separately by EMAIL_AUTOSEND_ENABLED. Keep it false while testing: review the reminder in Admin > Email deliveries, then use Send now on the intended row. Enable automatic sending only when the sender works and staff intend the pending backlog to be delivered. Before transport, a returned or no-longer-overdue loan is withheld and its queued email marked failed with an explanatory message. Reading a notice does not create a new reminder.
+
+Render Free sleep pauses checks and sending. The next awake cycle catches up; this is not an exact-time or always-on scheduler. Gmail authorization and inbox delivery must still work independently. Existing APK notification screens can display the new messages; no new APK is required for this backend feature.
+
+The migration adds a nullable notification-to-loan link and a unique overdue-reminder index. Existing records and email queue entries remain in place. The API start command must run alembic upgrade head before Uvicorn. Do not run seed or replace the database.

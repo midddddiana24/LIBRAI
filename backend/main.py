@@ -19,7 +19,7 @@ configure_logging();logger=logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(_app):
     stop=Event()
-    if settings.email_autosend_enabled:
+    if settings.email_autosend_enabled or settings.overdue_notifications_enabled:
         from backend.services.email_dispatch import poll
         Thread(target=poll,args=(stop,),daemon=True,name="librai-email").start()
     try:

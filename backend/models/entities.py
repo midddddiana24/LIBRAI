@@ -237,7 +237,9 @@ class AIFeedback(Base):
 
 class Notification(Base):
     __tablename__ = "notifications"
+    __table_args__ = (Index("uq_overdue_notice_per_loan", "borrowing_id", unique=True, sqlite_where=text("type = 'OVERDUE_REMINDER'"), postgresql_where=text("type = 'OVERDUE_REMINDER'")),)
     id: Mapped[int] = mapped_column(primary_key=True)
+    borrowing_id: Mapped[int | None] = mapped_column(ForeignKey("borrowings.id", ondelete="SET NULL"), nullable=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     type: Mapped[str] = mapped_column(String(60))
     message: Mapped[str] = mapped_column(Text)

@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     email_transport: Literal["smtp", "gmail_api"] = "smtp"
     gmail_oauth_file: Path = Path("generated/gmail-oauth.json")
     email_autosend_enabled: bool = False
+    overdue_notifications_enabled: bool = True
     media_bucket: str | None = None
     aws_endpoint_url_s3: str | None = None
     aws_access_key_id: str | None = None

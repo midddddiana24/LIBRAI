@@ -20,7 +20,7 @@ try {
     })
     await page.goto(base)
     await page.getByText('Connecting to your library…', { exact: true }).waitFor()
-    await page.locator('.startup-book > img').evaluate(image => image.decode())
+    await page.locator('.startup-cover-front img').evaluate(image => image.decode())
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width)
     assert.ok(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1))
     if (width === 768) await page.screenshot({ path: '../generated/startup-1.7-tablet.png' })
@@ -35,14 +35,14 @@ try {
     const p = await browser.newPage({ viewport: { width: 768, height: 1024 } })
     await p.route('**/health', route => route.fulfill({ json: { status: 'healthy' } }))
     let releaseImage
-    await p.route('**/librai-startup-book.png', async route => {
+    await p.route('**/librai-symbol-v2.png', async route => {
       if (failure === 'missing') return route.abort()
       await new Promise(resolve => { releaseImage = resolve })
       await route.continue()
     })
     await p.goto(base, { waitUntil: 'domcontentloaded' })
     if (failure === 'delayed') {
-      await p.locator('.startup-art-loading .startup-book-fallback').waitFor()
+      await p.locator('.startup-art-loading .startup-cover-front .startup-logo-fallback').waitFor()
       assert.equal(await p.getByRole('button', { name: 'Borrow a book', exact: true }).count(), 0)
       assert.ok(releaseImage)
       releaseImage()
@@ -55,6 +55,32 @@ try {
     console.log('PASS startup ' + failure + ' image: visible fallback and complete opening before Home')
     await p.close()
   }
+  const reveal = await browser.newPage({ viewport: { width: 768, height: 1024 } })
+  await reveal.addInitScript(() => {
+    window.__revealTiming = {}
+    new MutationObserver(() => {
+      if (document.querySelector('.startup-ready')) window.__revealTiming.ready ??= performance.now()
+      if (document.querySelector('.kiosk-menu')) window.__revealTiming.home ??= performance.now()
+    }).observe(document, { subtree: true, childList: true, attributes: true })
+  })
+  await reveal.route('**/health', route => route.fulfill({ json: { status: 'healthy' } }))
+  await reveal.goto(base, { waitUntil: 'domcontentloaded' })
+  await reveal.locator('.startup-art-ready').waitFor()
+  assert.equal(await reveal.locator('.startup-cover-front').count(), 1)
+  assert.equal(await reveal.locator('.startup-cover-inside').count(), 1)
+  assert.equal(await reveal.locator('.startup-page').count(), 2)
+  assert.equal(await reveal.locator('.startup-book').evaluate(el => getComputedStyle(el).transformStyle), 'preserve-3d')
+  assert.equal(await reveal.locator('.startup-book').evaluate(el => getComputedStyle(el).opacity), '1', 'Do not flatten the 3D book with parent opacity')
+  const initial = await reveal.locator('.startup-page-two').evaluate(el => getComputedStyle(el).transform)
+  await reveal.waitForTimeout(800)
+  assert.notEqual(await reveal.locator('.startup-page-two').evaluate(el => getComputedStyle(el).transform), initial)
+  await reveal.screenshot({ path: '../generated/startup-3d-book-fixed.png' })
+  await reveal.locator('.startup-ready').waitFor()
+  assert.ok(await reveal.locator('.startup-ready-logo').evaluate(el => el.complete && el.naturalWidth > 0))
+  await reveal.getByRole('button', { name: 'Borrow a book', exact: true }).waitFor()
+  assert.ok(await reveal.evaluate(() => window.__revealTiming.home - window.__revealTiming.ready >= 1150), 'Allow the 3D logo reveal and visible hold to finish')
+  console.log('PASS actual 3D book faces/page motion, unflattened parent, decoded logo and full reveal hold')
+  await reveal.close()
   const page = await browser.newPage({ viewport: { width: 768, height: 1024 }, reducedMotion: 'reduce' })
   let attempt = 0
   await page.route('**/health', route => route.fulfill({ status: ++attempt === 1 ? 503 : 200, json: { status: attempt === 1 ? 'unavailable' : 'healthy' } }))

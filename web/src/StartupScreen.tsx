@@ -13,6 +13,8 @@ export default function StartupScreen({ mode = 'kiosk', stage: requestedStage = 
   const [art, setArt] = useState<'loading' | 'ready' | 'fallback'>('loading')
   const image = useRef<HTMLImageElement>(null)
   const openingStarted = useRef(0)
+  const readyCallback = useRef(onReady)
+  useEffect(() => { readyCallback.current = onReady }, [onReady])
   const stage = requestedStage === 'ready' && !opened ? 'opening' : requestedStage
   useEffect(() => {
     let alive = true
@@ -39,18 +41,25 @@ export default function StartupScreen({ mode = 'kiosk', stage: requestedStage = 
     return () => window.clearTimeout(timer)
   }, [stage])
   useEffect(() => {
-    if (stage !== 'ready' || !onReady) return
+    if (stage !== 'ready') return
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const timer = window.setTimeout(onReady, reduced ? 100 : 420)
+    const timer = window.setTimeout(() => readyCallback.current?.(), reduced ? 100 : 1200)
     return () => window.clearTimeout(timer)
-  }, [stage, onReady])
+  }, [stage])
   const title = stage === 'ready' ? 'Your library is ready.' : stage === 'offline' ? 'Let’s reconnect.' : mode === 'admin' ? 'Opening your workspace' : 'Opening the library'
   const description = stage === 'ready' ? 'Find a book. Start something new.' : stage === 'offline' ? 'We couldn’t reach the library server. Check your internet connection and try again.' : stage === 'connecting' ? slow ? 'The server is taking a little longer. We’re still checking the connection.' : 'Connecting to your library…' : 'Preparing LIBRAI…'
   return <div className={`startup-screen startup-${stage} startup-art-${art}`}>
     <div className="startup-content">
       <div className="startup-illustration" aria-hidden="true">
-        <div className="startup-book"><img ref={image} src="/images/librai-startup-book.png" alt="" width="1773" height="883" />{art !== 'ready' && <span className="startup-book-fallback"><span /><span /></span>}<span className="startup-cover" /><span className="startup-page startup-page-one" /><span className="startup-page startup-page-two" /></div>
-        <img className="startup-ready-logo" src="/images/librai-symbol-v2.png" alt="" />
+        <div className="startup-book">
+          <span className="startup-back-cover" />
+          <span className="startup-page-block" />
+          <span className="startup-page startup-page-two"><span /></span>
+          <span className="startup-page startup-page-one"><span /></span>
+          <span className="startup-cover"><span className="startup-cover-front"><img ref={image} src="/images/librai-symbol-v2.png" alt="" width="64" height="64" /><span className="startup-logo-fallback">L</span><span>LIBRAI</span></span><span className="startup-cover-inside" /></span>
+          <span className="startup-spine" />
+        </div>
+        <span className="startup-ready-mark"><img className="startup-ready-logo" src="/images/librai-symbol-v2.png" alt="" width="112" height="112" /><span className="startup-logo-fallback">L</span></span>
       </div>
       <div role="status" aria-live="polite" aria-atomic="true"><h1>{title}</h1><p className="startup-description">{description}</p></div>
       {stage === 'offline' ? <button className="startup-retry" type="button" onClick={() => { setSlow(false); onRetry?.() }}>Try again</button> : <div className="startup-track" aria-hidden="true"><span /></div>}

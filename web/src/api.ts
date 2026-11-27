@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core'
+
 export const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1').replace(/\/$/, '')
 const API_ORIGIN = new URL(API_BASE).origin
 
@@ -65,6 +67,33 @@ export function mediaUrl(path?: string | null): string | undefined {
   if (/^https?:\/\//.test(path)) return path
   if (path.startsWith('/')) return `${API_ORIGIN}${path}`
   return `${API_BASE}/${path}`
+}
+
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  // Older APIs returned QR tickets relative to the API prefix, unlike media paths.
+  const url = path?.startsWith('/qr/download/') ? `${API_BASE}${path}` : mediaUrl(path)
+  if (!url || new URL(url).origin !== API_ORIGIN) throw new ApiError('The server returned an invalid download link. Refresh and try again.', 0)
+  if (Capacitor.isNativePlatform()) {
+    // Capacitor hands external HTTPS navigation to Android's browser for saving files.
+    window.location.assign(url)
+    return
+  }
+  try {
+    const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(20000) })
+    if (!response.ok) throw new ApiError(messageFrom(await response.json().catch(() => null), response.status), response.status)
+    const file = await response.blob()
+    const objectUrl = URL.createObjectURL(file)
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = filename
+    document.body.append(link)
+    link.click()
+    link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60000)
+  } catch (cause) {
+    if (cause instanceof ApiError) throw cause
+    throw new ApiError('Could not download the file. Check the connection and try again.', 0)
+  }
 }
 
 export type Page<T> = { items: T[]; total: number }

@@ -22,7 +22,7 @@ def qr_data(token):return "data:image/png;base64,"+base64.b64encode(qr_png(token
 def qr_admin_payload(entity_type:str,entity_id:int,token:str):
     ticket=create_qr_download_grant(entity_type,entity_id)
     id_key="user_id" if entity_type=="user" else "book_copy_id"
-    return {id_key:entity_id,"qr_image":qr_data(token),"download_url":f"/qr/download/{ticket}"}
+    return {id_key:entity_id,"qr_image":qr_data(token),"download_url":f"/api/v1/qr/download/{ticket}"}
 
 @router.post("/qr/decode-image")
 async def decode_qr_image(file:UploadFile=File(...)):

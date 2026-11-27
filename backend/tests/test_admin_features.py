@@ -62,7 +62,7 @@ def test_admin_member_management_and_qr_operations(client, auth_headers):
     assert user_qr.json()["qr_image"].startswith("data:image/png;base64,")
     existing_user_qr = client.get(f"/api/v1/users/{member['id']}/qr", headers=auth_headers)
     assert existing_user_qr.status_code == 200
-    user_download = client.get(f"/api/v1{existing_user_qr.json()['download_url']}")
+    user_download = client.get(existing_user_qr.json()["download_url"])
     assert user_download.status_code == 200
     assert user_download.headers["content-type"] == "image/png"
     assert "attachment;" in user_download.headers["content-disposition"]
@@ -74,7 +74,7 @@ def test_admin_member_management_and_qr_operations(client, auth_headers):
     assert copy_qr.json()["qr_image"].startswith("data:image/png;base64,")
     existing_copy_qr = client.get(f"/api/v1/book-copies/{copies[0]['id']}/qr", headers=auth_headers)
     assert existing_copy_qr.status_code == 200
-    copy_download = client.get(f"/api/v1{existing_copy_qr.json()['download_url']}")
+    copy_download = client.get(existing_copy_qr.json()["download_url"])
     assert copy_download.status_code == 200
     assert copy_download.headers["content-type"] == "image/png"
 

@@ -6,6 +6,7 @@ const base = process.env.ADMIN_UI_URL || 'http://127.0.0.1:4190'
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true })
 const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' })
 const writes = [], reads = [], errors = []
+let qrMode = 'legacy'
 const user = { id: 7, name: 'Sample Reader', first_name: 'Sample', last_name: 'Reader', student_id: 'TEST-007', course: 'Test course', year_level: '1', email: 'sample@example.invalid', account_status: 'active' }
 let emails = [{ id: 31, recipient: 'sample@example.invalid', subject: 'Sample library message', status: 'failed', error: 'Synthetic delivery failure', created_at: '2026-01-02T10:00:00Z', sent_at: null }]
 let reservations = [{ id: 19, user_id: 7, user_name: user.name, student_id: user.student_id, book_title: 'Sample reservation', status: 'active' }]
@@ -31,7 +32,11 @@ await context.route('**/*', async route => {
   else if (path === '/notifications/admin/email-deliveries') { const status = url.searchParams.get('status'); const filtered = emails.filter(row => !status || row.status === status); result = { items: filtered, total: filtered.length } }
   else if (path === '/notifications/admin/email-deliveries/31/retry') { emails = [{ ...emails[0], status: 'pending', error: null }]; result = { message: 'Synthetic retry queued.' } }
   else if (path === '/notifications/admin/email-deliveries/31/send') { emails = [{ ...emails[0], status: 'sent' }]; result = { message: 'Synthetic send accepted.' } }
+  else if (path === '/users/7/qr') result = { download_url: (qrMode === 'legacy' ? '' : '/api/v1') + '/qr/download/mock-ticket' }
+  else if (path === '/qr/download/mock-ticket') return qrMode === 'expired' ? route.fulfill({status:410,json:{detail:'This QR download link has expired. Request a new QR.'},headers}) : route.fulfill({body:Buffer.from('89504e470d0a1a0a','hex'),contentType:'image/png',headers})
   else if (path === '/users/7/email-qr') result = { message: 'Synthetic QR email queued.' }
+  else if (path === '/reports/export') result = { download_url: '/api/v1/reports/public-download/mock-report' }
+  else if (path === '/reports/public-download/mock-report') return route.fulfill({body:'%PDF-1.4\nmock export',contentType:'application/pdf',headers})
   else if (path === '/fines') result = { items: fines, total: fines.length }
   else if (path === '/fines/8/pay') { fines = [{ ...fines[0], status: 'paid' }]; result = fines[0] }
   else if (path === '/reservations' && !write) result = { items: reservations, total: reservations.length }
@@ -81,6 +86,28 @@ try {
   assert.equal(await page.locator('tbody tr').first().locator('td').nth(1).innerText(), 'Sample Reader 1')
   await page.getByLabel('Find on this page').fill('Zebra')
   assert.equal(await page.locator('tbody tr').count(), 1)
+  await navigate('Library users')
+  for (const mode of ['legacy', 'canonical']) {
+    qrMode = mode
+    const downloadEvent = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'QR for Sample Reader', exact: true }).click()
+    const qrDownload = await downloadEvent
+    assert.equal(qrDownload.suggestedFilename(), 'LIBRAI-users-7-QR.png')
+    assert.equal(await qrDownload.failure(), null)
+    assert.equal(context.pages().length, 1, 'Download must not open a popup')
+  }
+  qrMode = 'expired'
+  await page.getByRole('button', { name: 'QR for Sample Reader', exact: true }).click()
+  await page.getByText('This QR download link has expired. Request a new QR.', { exact: true }).waitFor()
+  await navigate('Reports')
+  const pdfEvent = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Export report', exact: true }).click()
+  const pdf = await pdfEvent
+  assert.equal(pdf.suggestedFilename(), 'LIBRAI-daily_borrowing.pdf')
+  assert.equal(await pdf.failure(), null)
+  assert.equal(context.pages().length, 1)
+
+  assert.ok(reads.includes('GET /qr/download/mock-ticket'), 'Legacy API-relative QR URL must resolve under /api/v1')
   await navigate('Overview')
   await attention.getByRole('button', { name: /Failed emails/ }).click()
   assert.equal(await page.getByLabel('Filter records by status').inputValue(), 'failed')

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { api, mediaUrl } from './api'
+import { api, downloadFile } from './api'
 
 const types = [
   ['daily_borrowing', 'Daily borrowing'], ['weekly_borrowing', 'Weekly borrowing'],
@@ -25,8 +25,7 @@ export default function ReportsPanel({ token }: { token: string }) {
     try {
       if (exportFile) {
         const result = await api<{ download_url: string }>('/reports/export', { method: 'POST', body: JSON.stringify({ report_type: type, start_date: start || null, end_date: end || null, format }) }, token)
-        const url = mediaUrl(result.download_url)
-        if (url) window.open(url, '_blank', 'noopener,noreferrer')
+        await downloadFile(result.download_url, `LIBRAI-${type}.${format}`)
       } else {
         const params = new URLSearchParams({ report_type: type })
         if (start) params.set('start_date', start)

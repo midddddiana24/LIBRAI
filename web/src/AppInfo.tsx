@@ -1,8 +1,8 @@
 ﻿import { useRef, useState } from 'react'
 import { API_BASE } from './api'
 import { useKioskLanguage } from './kioskLanguage'
-export const APP_VERSION='1.9.2'
-export const APP_BUILD=15
+export const APP_VERSION='1.9.3'
+export const APP_BUILD=16
 export default function AppInfo({online}:{online:boolean|null}){
  const [open,setOpen]=useState(false), dialog=useRef<HTMLDialogElement>(null)
  const {t}=useKioskLanguage()

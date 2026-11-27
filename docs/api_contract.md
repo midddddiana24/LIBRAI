@@ -176,3 +176,5 @@ See [AI assistant behavior and verification](ai_assistant.md) for matching limit
 ### UX 1.9.0
 
 `GET /borrowings` adds optional `overdue=true` for active loans past their actual due date, even when their stored status is still ACTIVE. Existing authorization remains mandatory. Borrowing projections add nullable `renewal_unavailable_reason`; `can_renew` also checks waiting reservations by other members. See [UX release and verification](release_1.9.0.md).
+
+QR download URLs returned by member/copy QR endpoints include the API prefix: `/api/v1/qr/download/<ticket>`. Clients can use the returned path directly against the API origin. Older `/qr/download/<ticket>` payloads require API-prefix resolution.

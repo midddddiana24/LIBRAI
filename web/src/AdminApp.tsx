@@ -5,7 +5,7 @@ import { AdminConfirmation, AdminPagination, AdminTable, StatusBadge, type Confi
 import { adminValue } from './adminValue'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowDownLeft, ArrowUpRight, BarChart3, BookOpen, Bookmark, Check, ChevronRight, CircleUserRound, ClipboardList, Clock3, LayoutDashboard, LoaderCircle, LogIn, LogOut, Mail, Menu, Plus, Receipt, RefreshCw, Settings2, ShieldCheck, UsersRound, X } from 'lucide-react'
-import { ApiError, api, health, mediaUrl, type Book, type Page } from './api'
+import { ApiError, api, health, downloadFile, type Book, type Page } from './api'
 import ReportsPanel from './ReportsPanel'
 import MemberForm from './MemberForm'
 import KioskTileArt from './KioskTileArt'
@@ -194,8 +194,7 @@ export default function AdminApp() {
     setError('')
     try {
       const result = await api<{ download_url: string }>(path, {}, token)
-      const url = mediaUrl(result.download_url)
-      if (url) window.open(url, '_blank', 'noopener,noreferrer')
+      await downloadFile(result.download_url, 'LIBRAI-' + path.split('/')[1] + '-' + path.split('/')[2] + '-QR.png')
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not get QR download.') }
   }
 
@@ -204,8 +203,7 @@ export default function AdminApp() {
     setError('')
     try {
       const result = await api<{ download_url: string }>(`/books/${copiesBook.id}/copies/qr-sheet`, { method: 'POST' }, token)
-      const url = mediaUrl(result.download_url)
-      if (url) window.open(url, '_blank', 'noopener,noreferrer')
+      await downloadFile(result.download_url, `LIBRAI-book-${copiesBook.id}-QR-sheet.pdf`)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not create QR sheet.') }
   }
 
